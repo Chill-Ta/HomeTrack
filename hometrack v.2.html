@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HomeTrack – Home Goods Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#1f2937;line-height:1.5;font-size:14px}
+button{cursor:pointer;font-family:inherit;font-size:14px;border:none;outline:none}
+input,select,textarea{font-family:inherit;font-size:14px;outline:none}
+a{text-decoration:none;cursor:pointer}
+table{border-collapse:collapse;width:100%}
+:root{
+  --p:#6366f1;--pd:#4f46e5;--pl:#eef2ff;
+  --d:#ef4444;--dl:#fef2f2;
+  --w:#f59e0b;--wl:#fffbeb;
+  --s:#10b981;--sl:#ecfdf5;
+  --sb:#1e1b4b;--border:#e5e7eb;
+  --card:#fff;--bg:#f3f4f6;--text:#1f2937;--muted:#6b7280;
+  --sha:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shm:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+  --r:8px;--sw:240px
+}
+/* AUTH */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#6366f1,#4f46e5 50%,#1e1b4b)}
+.auth-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.auth-logo{font-size:36px;text-align:center;margin-bottom:6px}
+.auth-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
+.auth-tabs{display:flex;background:var(--bg);border-radius:var(--r);padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;padding:8px;border-radius:6px;font-weight:500;color:var(--muted);background:transparent;transition:all .2s}
+.auth-tab.active{background:#fff;color:var(--p);box-shadow:var(--sha)}
+/* LAYOUT */
+#app-screen{display:flex;min-height:100vh}
+.sidebar{width:var(--sw);background:var(--sb);color:#fff;position:fixed;left:0;top:0;bottom:0;display:flex;flex-direction:column;z-index:100}
+.sb-brand{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sb-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px}
+.sb-nav{flex:1;padding:10px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.6);font-weight:500;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:rgba(99,102,241,.25);color:#fff;border-left-color:var(--p)}
+.nav-ic{font-size:16px;width:20px}
+.sb-foot{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
+.user-mail{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:8px;word-break:break-all}
+.main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh}
+/* NOTIF */
+#notif-bar{background:#fffbeb;border-bottom:2px solid #fde68a;display:none}
+.notif-item{display:flex;align-items:center;gap:12px;padding:11px 24px;border-bottom:1px solid #fde68a}
+.notif-item:last-child{border-bottom:none}
+.notif-ic{font-size:15px;flex-shrink:0}
+.notif-msg{flex:1;font-size:13px;color:#92400e}
+.notif-msg strong{color:#78350f}
+.notif-acts{display:flex;gap:6px;flex-shrink:0}
+/* PAGE */
+.pw{padding:32px;flex:1}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.ph h1{font-size:24px;font-weight:700}
+.ph h2{font-size:20px;font-weight:700}
+.breadcrumb{display:flex;align-items:center;gap:8px}
+.bc-sep{color:var(--muted)}
+.ha{display:flex;gap:10px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sha);padding:24px}
+/* LIST CARDS */
+.lists-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.list-card{background:var(--card);border-radius:12px;padding:20px;box-shadow:var(--sha);cursor:pointer;transition:all .2s;border:1.5px solid var(--border)}
+.list-card:hover{box-shadow:var(--shm);transform:translateY(-2px)}
+.list-card.lc-exp{border-color:var(--d)!important;background:linear-gradient(135deg,#fff,#fff7f7)!important}
+.list-card.lc-warn{border-color:var(--w)!important;background:linear-gradient(135deg,#fff,#fffeee)!important}
+.list-card:not(.lc-exp):not(.lc-warn):hover{border-color:var(--p)}
+.lc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.lc-head h3{font-size:15px;font-weight:600;flex:1;margin-right:8px}
+.lc-acts{display:flex;gap:4px}
+.lc-desc{font-size:13px;color:var(--muted);margin-bottom:8px}
+.lc-alert-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.lc-alert{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.lc-alert.exp{background:var(--dl);color:var(--d)}
+.lc-alert.soon{background:var(--wl);color:#92400e}
+.lc-foot{display:flex;align-items:center;justify-content:space-between}
+.item-count{font-size:12px;font-weight:600;color:var(--p);background:var(--pl);padding:2px 10px;border-radius:20px}
+.lc-date{font-size:12px;color:var(--muted)}
+/* TABLE */
+.tw{background:var(--card);border-radius:var(--r);box-shadow:var(--sha);overflow:hidden;overflow-x:auto}
+.gt th,.gt td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle}
+.gt th{background:#f9fafb;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.gt tr:last-child td{border-bottom:none}
+.gt tr:hover td{background:#fafafa}
+.row-exp td{background:#fef2f2!important}
+.row-exp:hover td{background:#fee2e2!important}
+.row-warn td{background:#fffbeb!important}
+.row-warn:hover td{background:#fef3c7!important}
+.ac{white-space:nowrap}
+.ec{text-align:center;color:var(--muted);padding:48px!important;font-size:14px}
+/* BADGES */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.bd{background:var(--dl);color:var(--d)}.bw{background:var(--wl);color:#92400e}
+.bs{background:var(--sl);color:#065f46}.bg{background:#f3f4f6;color:var(--muted)}
+.type-b{background:var(--pl);color:var(--pd);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+/* BUTTONS */
+.btn-p{background:var(--p);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500;transition:background .15s}
+.btn-p:hover{background:var(--pd)}
+.btn-sec{background:#fff;color:var(--text);border:1.5px solid var(--border);padding:8px 18px;border-radius:var(--r);font-weight:500;transition:all .15s}
+.btn-sec:hover{border-color:var(--p);color:var(--p)}
+.btn-g{background:transparent;color:var(--muted);padding:8px 14px;border-radius:var(--r);font-weight:500;transition:all .15s}
+.btn-g:hover{background:var(--bg);color:var(--text)}
+.btn-d{background:var(--d);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500}
+.btn-d:hover{background:#dc2626}
+.btn-s{background:var(--s);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500}
+.btn-s:hover{background:#059669}
+.sm{padding:4px 10px!important;font-size:12px!important;border-radius:6px!important}
+.full{width:100%;padding:12px;font-size:15px;font-weight:600}
+.icon-btn{background:transparent;color:var(--muted);padding:4px 6px;border-radius:4px;font-size:14px;transition:all .15s}
+.icon-btn:hover{background:var(--bg);color:var(--text)}
+/* FORMS */
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:13px;font-weight:500}
+.hint{font-size:11px;font-weight:400;color:var(--muted)}
+.fg input,.fg select,.fg textarea{border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);background:#fff;transition:border-color .15s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.sect{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.warr-row{display:grid;grid-template-columns:1fr 130px;gap:12px}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+/* PRICE ROW */
+.price-row{display:flex;gap:6px}
+.price-row select{width:110px;border:1.5px solid var(--border);border-radius:var(--r);padding:9px 8px;color:var(--text);background:#fff;font-family:inherit;font-size:14px;cursor:pointer;transition:border-color .15s}
+.price-row select:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08);outline:none}
+.price-row input{flex:1;border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);background:#fff;transition:border-color .15s}
+.price-row input:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08);outline:none}
+/* AUTOCOMPLETE */
+.sugg-wrap{position:relative}
+.sugg-dd{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1.5px solid var(--p);border-top:none;border-radius:0 0 var(--r) var(--r);box-shadow:var(--shm);z-index:300;max-height:210px;overflow-y:auto;display:none}
+.sugg-item{padding:9px 13px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)}
+.sugg-item:last-child{border-bottom:none}
+.sugg-item:hover,.sugg-item.highlighted{background:var(--pl);color:var(--pd)}
+.sugg-item mark{background:transparent;color:var(--pd);font-weight:700}
+/* MODAL */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.mc{background:#fff;border-radius:16px;width:100%;max-width:660px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.mc.sm{max-width:440px}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border)}
+.mh h2{font-size:17px;font-weight:700}
+.xbtn{background:transparent;color:var(--muted);font-size:20px;padding:4px 8px;border-radius:6px;line-height:1}
+.xbtn:hover{background:var(--bg);color:var(--text)}
+.mb{padding:22px 24px;overflow-y:auto;flex:1}
+.mf{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border)}
+/* MOVE/DUP info box */
+.info-box{background:#f8f9ff;border:1.5px solid #c7d2fe;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#3730a3;line-height:1.7;margin-top:14px}
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px}
+.empty-ic{font-size:48px;margin-bottom:16px}
+.empty p{color:var(--muted);font-size:15px}
+/* TOAST */
+#toasts{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1f2937;color:#fff;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:500;box-shadow:var(--shm);transform:translateY(16px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{background:#065f46}
+.toast.err{background:#991b1b}
+.mt2{margin-top:8px}.mt3{margin-top:12px}.mt4{margin-top:16px}
+.muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🏠</div>
+    <div class="auth-title">HomeTrack</div>
+    <div class="auth-sub">Track all your home goods in one place</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label>Email</label><input id="ae" type="email" placeholder="you@example.com"></div>
+    <div class="fg" style="margin-bottom:8px"><label>Password</label><input id="ap" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')submitAuth()"></div>
+    <p id="auth-msg" style="font-size:13px;min-height:18px;margin-bottom:12px"></p>
+    <button class="btn-p full" id="auth-btn" onclick="submitAuth()">Login</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">🏠 HomeTrack</div>
+      <div class="sb-sub">Home Goods Tracker</div>
+    </div>
+    <nav class="sb-nav">
+      <a id="nav-dash" class="nav-item active" onclick="goto('dashboard')"><span class="nav-ic">📋</span> My Lists</a>
+      <a id="nav-srch" class="nav-item" onclick="goto('search')"><span class="nav-ic">🔍</span> Search</a>
+      <a id="nav-rb" class="nav-item" onclick="goto('recycle')"><span class="nav-ic">🗑️</span> Recycle Bin</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="user-mail" id="user-mail"></div>
+      <button class="btn-g sm" style="color:rgba(255,255,255,.55);width:100%" onclick="signOut()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="notif-bar"></div>
+
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard" class="pw">
+      <div class="ph"><h1>My Lists</h1><button class="btn-p" onclick="openListModal()">+ New List</button></div>
+      <div id="lists-grid" class="lists-grid"></div>
+    </div>
+
+    <!-- LIST DETAIL -->
+    <div id="pg-list" class="pw" style="display:none">
+      <div class="ph">
+        <div class="breadcrumb">
+          <button class="btn-g" style="padding:6px 10px" onclick="goto('dashboard')">← Back</button>
+          <span class="bc-sep">/</span><h2 id="list-title"></h2>
+        </div>
+        <div class="ha">
+          <button class="btn-sec" onclick="openListModal(S.lid)">✏️ Edit List</button>
+          <button class="btn-p" onclick="openGoodModal(null)">+ Add Item</button>
+        </div>
+      </div>
+      <div class="tw">
+        <table class="gt">
+          <thead><tr>
+            <th>Name</th><th>Type</th><th>Price</th><th>Bought From</th>
+            <th>Date Bought</th><th>Expiry</th><th>Warranty Expiry</th>
+            <th>Location</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="goods-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div id="pg-search" class="pw" style="display:none">
+      <div class="ph"><h1>Search Items</h1></div>
+      <div class="card" style="margin-bottom:20px">
+        <div class="filter-grid">
+          <!-- Keyword with autocomplete -->
+          <div class="fg sugg-wrap">
+            <label>Keyword</label>
+            <input id="f-kw" type="text" placeholder="Name, location, notes…"
+              oninput="showKwSugg(this.value)"
+              onblur="setTimeout(()=>hideKwSugg(),180)"
+              onkeydown="handleKwKey(event)">
+            <div id="kw-sugg" class="sugg-dd"></div>
+          </div>
+          <div class="fg"><label>Type</label>
+            <select id="f-type">
+              <option value="">All Types</option>
+              <option>Food</option><option>Consumer Good</option><option>Electronic Device</option>
+              <option>Medicine</option><option>Clothing</option><option>Furniture</option>
+              <option>Appliance</option><option>Tool</option><option>Toy / Game</option>
+              <option>Sports Equipment</option><option>Others</option>
+            </select>
+          </div>
+          <!-- Bought From with autocomplete -->
+          <div class="fg sugg-wrap">
+            <label>Bought From</label>
+            <input id="f-bf" type="text" placeholder="Store name…"
+              oninput="showBfSugg(this.value,'f-bf-sugg')"
+              onblur="setTimeout(()=>hideSugg('f-bf-sugg'),180)"
+              onkeydown="if(event.key==='Enter')doSearch()">
+            <div id="f-bf-sugg" class="sugg-dd"></div>
+          </div>
+          <div class="fg"><label>List</label><select id="f-list"><option value="">All Lists</option></select></div>
+          <div class="fg"><label>Date Bought (From)</label><input id="f-df" type="date"></div>
+          <div class="fg"><label>Date Bought (To)</label><input id="f-dt" type="date"></div>
+          <div class="fg"><label>Expiry (From)</label><input id="f-ef" type="date"></div>
+          <div class="fg"><label>Expiry (To)</label><input id="f-et" type="date"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-p" onclick="doSearch()">🔍 Search</button>
+          <button class="btn-g" onclick="clearSearch()">Clear</button>
+        </div>
+      </div>
+      <div id="search-results"></div>
+    </div>
+
+    <!-- RECYCLE BIN -->
+    <div id="pg-recycle" class="pw" style="display:none">
+      <div class="ph"><div><h1>Recycle Bin</h1><p class="muted mt2">Items are permanently deleted 30 days after removal.</p></div></div>
+      <div id="recycle-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: ADD/EDIT GOOD -->
+<div id="modal-good" class="mo" onclick="overlayClose(event,'modal-good')">
+  <div class="mc">
+    <div class="mh"><h2 id="mg-title">Add Item</h2><button class="xbtn" onclick="closeModal('modal-good')">✕</button></div>
+    <div class="mb">
+      <div class="fg2">
+        <div class="fg">
+          <label>Goods Type *</label>
+          <select id="g-type">
+            <option value="Food">🍎 Food</option>
+            <option value="Consumer Good">🛍️ Consumer Good</option>
+            <option value="Electronic Device">💻 Electronic Device</option>
+            <option value="Medicine">💊 Medicine</option>
+            <option value="Clothing">👕 Clothing</option>
+            <option value="Furniture">🪑 Furniture</option>
+            <option value="Appliance">🏠 Appliance</option>
+            <option value="Tool">🔧 Tool</option>
+            <option value="Toy / Game">🎮 Toy / Game</option>
+            <option value="Sports Equipment">⚽ Sports Equipment</option>
+            <option value="Others">📦 Others</option>
+          </select>
+        </div>
+        <div class="fg"><label>Goods Name *</label><input id="g-name" type="text" placeholder="e.g., Milk, iPhone 15…"></div>
+        <!-- Bought From with store autocomplete -->
+        <div class="fg sugg-wrap">
+          <label>Bought From</label>
+          <input id="g-bf" type="text" placeholder="Type or select a store…"
+            oninput="showBfSugg(this.value,'g-bf-sugg')"
+            onblur="setTimeout(()=>hideSugg('g-bf-sugg'),180)">
+          <div id="g-bf-sugg" class="sugg-dd"></div>
+        </div>
+        <div class="fg"><label>Date Bought</label><input id="g-db" type="date"></div>
+        <div class="fg"><label>Expiry Date</label><input id="g-exp" type="date"></div>
+        <div class="fg">
+          <label>Price</label>
+          <div class="price-row">
+            <select id="g-curr">
+              <option value="THB">฿ THB</option><option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option><option value="JPY">¥ JPY</option>
+              <option value="GBP">£ GBP</option><option value="SGD">S$ SGD</option>
+              <option value="CNY">¥ CNY</option><option value="AUD">A$ AUD</option>
+              <option value="HKD">HK$ HKD</option>
+            </select>
+            <input id="g-price" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:14px"><label>Location Stored</label><input id="g-loc" type="text" placeholder="e.g., Kitchen shelf, Bedroom drawer"></div>
+      <div class="sect">Warranty</div>
+      <div class="warr-row" style="margin-bottom:12px">
+        <div class="fg"><label>Duration <span class="hint">(from today)</span></label><input id="g-wv" type="number" min="0" placeholder="e.g., 12" oninput="calcWarranty()"></div>
+        <div class="fg"><label>Unit</label>
+          <select id="g-wu" onchange="calcWarranty()">
+            <option value="days">Days</option><option value="weeks">Weeks</option>
+            <option value="months" selected>Months</option><option value="years">Years</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>Warranty Expiry Date <span class="hint">— auto-calculated · adjust if needed</span></label>
+        <input id="g-wexp" type="date">
+      </div>
+      <div class="fg"><label>Other Description</label><textarea id="g-desc" rows="3" placeholder="Serial number, model, notes, links…"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn-g" onclick="closeModal('modal-good')">Cancel</button>
+      <button class="btn-p" onclick="saveGood()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: LIST -->
+<div id="modal-list" class="mo" onclick="overlayClose(event,'modal-list')">
+  <div class="mc sm">
+    <div class="mh"><h2 id="ml-title">New List</h2><button class="xbtn" onclick="closeModal('modal-list')">✕</button></div>
+    <div class="mb">
+      <div class="fg" style="margin-bottom:12px"><label>List Name *</label><input id="l-name" type="text" placeholder="e.g., Kitchen, Electronics"></div>
+      <div class="fg"><label>Description</label><textarea id="l-desc" rows="2" placeholder="Optional"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn-g" onclick="closeModal('modal-list')">Cancel</button>
+      <button class="btn-p" onclick="submitList()">Save List</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: MOVE / DUPLICATE -->
+<div id="modal-move" class="mo" onclick="overlayClose(event,'modal-move')">
+  <div class="mc sm">
+    <div class="mh"><h2>Move or Duplicate Item</h2><button class="xbtn" onclick="closeModal('modal-move')">✕</button></div>
+    <div class="mb">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:3px">Selected item</p>
+      <p id="mv-item-name" style="font-weight:700;font-size:15px;margin-bottom:18px;color:var(--text)"></p>
+      <div class="fg">
+        <label>Target List</label>
+        <select id="mv-list"></select>
+      </div>
+      <div class="info-box">
+        <strong>Move →</strong> removes item from the current list and places it in the target list.<br>
+        <strong>Duplicate 📋</strong> keeps the original and creates an identical copy in the target list.
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn-g" onclick="closeModal('modal-move')">Cancel</button>
+      <button class="btn-sec" onclick="duplicateItem()">📋 Duplicate</button>
+      <button class="btn-p" onclick="moveItem()">→ Move</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ┌──────────────────────────────────────────────────┐
+// │  ⚠️  REPLACE WITH YOUR SUPABASE CREDENTIALS     │
+// └──────────────────────────────────────────────────┘
+const SB_URL = 'https://jsvfuhrwsimlwuxhrlev.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdmZ1aHJ3c2ltbHd1eGhybGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDU1MzMsImV4cCI6MjA5MzgyMTUzM30.DlmpDQluCvz5jyHrWTBWClNSt0reZ4_1oZyAH-T3g7A';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+// ── STATE ─────────────────────────────────────────────
+const S = {
+  user:null, page:'dashboard',
+  lid:null, lname:'',
+  lists:[], goods:[],
+  expiring:[], stores:[], allItemNames:[],
+  editGid:null, editLid:null, moveGid:null,
+  fromSearch:false,
+  dismissed:new Set(), isSignup:false,
+  kwIdx:-1,   // keyboard nav index for kw suggestions
+};
+
+const CURR = {THB:'฿',USD:'$',EUR:'€',JPY:'¥',GBP:'£',SGD:'S$',CNY:'¥',AUD:'A$',HKD:'HK$'};
+
+// ── HELPERS ───────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const a = s  => s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : '';
+const h = s  => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+
+function fmtDate(d){
+  if(!d) return '—';
+  return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function daysTo(d){
+  if(!d) return null;
+  const t=new Date();t.setHours(0,0,0,0);
+  const x=new Date(d+'T12:00:00');x.setHours(0,0,0,0);
+  return Math.ceil((x-t)/86400000);
+}
+function addDur(v,u){
+  const d=new Date(),n=parseInt(v);
+  if(u==='days') d.setDate(d.getDate()+n);
+  else if(u==='weeks') d.setDate(d.getDate()+n*7);
+  else if(u==='months') d.setMonth(d.getMonth()+n);
+  else if(u==='years') d.setFullYear(d.getFullYear()+n);
+  return d.toISOString().split('T')[0];
+}
+function status(exp){
+  if(!exp) return {lbl:'No Expiry',cls:'bg'};
+  const d=daysTo(exp);
+  if(d<0) return {lbl:'Expired',cls:'bd'};
+  if(d===0) return {lbl:'Expires Today!',cls:'bd'};
+  if(d<=7) return {lbl:`Expires in ${d}d`,cls:'bw'};
+  return {lbl:'OK',cls:'bs'};
+}
+function fmtPrice(p,c){
+  if(p===null||p===undefined||p==='') return '—';
+  const sym=CURR[c]||(c?c+' ':'');
+  return sym+Number(p).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function highlight(str,query){
+  if(!query) return h(str);
+  const idx=str.toLowerCase().indexOf(query.toLowerCase());
+  if(idx<0) return h(str);
+  return h(str.slice(0,idx))+'<mark>'+h(str.slice(idx,idx+query.length))+'</mark>'+h(str.slice(idx+query.length));
+}
+function toast(msg,type='ok'){
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;
+  $('toasts').appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);
+}
+function openModal(id){$(id).style.display='flex';}
+function closeModal(id){$(id).style.display='none';}
+function overlayClose(e,id){if(e.target===$(id))closeModal(id);}
+
+// ── AUTH ──────────────────────────────────────────────
+function switchTab(tab){
+  S.isSignup=tab==='signup';
+  $('tab-login').classList.toggle('active',!S.isSignup);
+  $('tab-signup').classList.toggle('active',S.isSignup);
+  $('auth-btn').textContent=S.isSignup?'Sign Up':'Login';
+  $('auth-msg').textContent='';
+}
+async function submitAuth(){
+  const email=$('ae').value.trim(),pw=$('ap').value;
+  const msg=$('auth-msg');msg.textContent='';msg.style.color='#ef4444';
+  if(!email||!pw){msg.textContent='Enter email and password.';return;}
+  try{
+    if(S.isSignup){
+      const{error}=await sb.auth.signUp({email,password:pw});
+      if(error)throw error;
+      msg.style.color='#10b981';msg.textContent='✅ Check your email to confirm your account!';
+    }else{
+      const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
+      if(error)throw error;
+      S.user=data.user;await initApp();
+    }
+  }catch(e){msg.textContent=e.message;}
+}
+async function signOut(){
+  await sb.auth.signOut();S.user=null;
+  $('app-screen').style.display='none';$('auth-screen').style.display='flex';
+  $('ae').value='';$('ap').value='';$('auth-msg').textContent='';
+}
+
+// ── INIT ──────────────────────────────────────────────
+async function initApp(){
+  $('auth-screen').style.display='none';$('app-screen').style.display='flex';
+  $('user-mail').textContent=S.user.email;
+  await Promise.all([purgeOldDeleted(),loadLists(),loadStores()]);
+  await checkExpiring();
+  goto('dashboard');
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function goto(page,lid=null,lname=''){
+  S.page=page;
+  if(lid){S.lid=lid;S.lname=lname;}
+  ['pg-dashboard','pg-list','pg-search','pg-recycle'].forEach(p=>$(p).style.display='none');
+  ['nav-dash','nav-srch','nav-rb'].forEach(n=>$(n).classList.remove('active'));
+  if(page==='dashboard'){$('pg-dashboard').style.display='block';$('nav-dash').classList.add('active');renderDash();}
+  else if(page==='list-detail'){$('pg-list').style.display='block';renderList();}
+  else if(page==='search'){$('pg-search').style.display='block';$('nav-srch').classList.add('active');initSearch();}
+  else if(page==='recycle'){$('pg-recycle').style.display='block';$('nav-rb').classList.add('active');loadRecycle();}
+}
+
+// ── LISTS ─────────────────────────────────────────────
+async function loadLists(){
+  const{data:lists}=await sb.from('lists').select('id,name,description,created_at').eq('user_id',S.user.id).order('created_at',{ascending:false});
+  const{data:cnts}=await sb.from('goods').select('list_id').eq('user_id',S.user.id).is('deleted_at',null);
+  const cm={};(cnts||[]).forEach(g=>{cm[g.list_id]=(cm[g.list_id]||0)+1;});
+  // expiry grouping per list
+  const wk=new Date();wk.setDate(wk.getDate()+7);
+  const{data:expI}=await sb.from('goods').select('list_id,expiry_date').eq('user_id',S.user.id).is('deleted_at',null).not('expiry_date','is',null).lte('expiry_date',wk.toISOString().split('T')[0]);
+  const em={};
+  (expI||[]).forEach(g=>{
+    if(!em[g.list_id])em[g.list_id]={exp:0,soon:0};
+    daysTo(g.expiry_date)<0?em[g.list_id].exp++:em[g.list_id].soon++;
+  });
+  S.lists=(lists||[]).map(l=>({...l,cnt:cm[l.id]||0,em:em[l.id]||{exp:0,soon:0}}));
+}
+function renderDash(){
+  const g=$('lists-grid');
+  if(!S.lists.length){g.innerHTML=`<div class="empty"><div class="empty-ic">📦</div><p>No lists yet. Create your first list!</p></div>`;return;}
+  g.innerHTML=S.lists.map(l=>{
+    const e=l.em;
+    const cls=`list-card${e.exp>0?' lc-exp':e.soon>0?' lc-warn':''}`;
+    let alerts='';
+    if(e.exp>0)alerts+=`<span class="lc-alert exp">🔴 ${e.exp} expired</span>`;
+    if(e.soon>0)alerts+=`<span class="lc-alert soon">⚠️ ${e.soon} expiring soon</span>`;
+    return `<div class="${cls}" data-id="${a(l.id)}" data-name="${a(l.name)}" onclick="handleCardClick(this)">
+      <div class="lc-head">
+        <h3>${h(l.name)}</h3>
+        <div class="lc-acts" onclick="event.stopPropagation()">
+          <button class="icon-btn" onclick="openListModal('${a(l.id)}')">✏️</button>
+          <button class="icon-btn" onclick="deleteList('${a(l.id)}')">🗑️</button>
+        </div>
+      </div>
+      ${l.description?`<p class="lc-desc">${h(l.description)}</p>`:''}
+      ${alerts?`<div class="lc-alert-row">${alerts}</div>`:''}
+      <div class="lc-foot">
+        <span class="item-count">${l.cnt} item${l.cnt!==1?'s':''}</span>
+        <span class="lc-date">${fmtDate(l.created_at.split('T')[0])}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function handleCardClick(el){goto('list-detail',el.dataset.id,el.dataset.name);}
+function openListModal(lid=null){
+  S.editLid=lid;$('ml-title').textContent=lid?'Edit List':'New List';
+  $('l-name').value='';$('l-desc').value='';
+  if(lid){const l=S.lists.find(x=>x.id===lid);if(l){$('l-name').value=l.name;$('l-desc').value=l.description||'';}}
+  openModal('modal-list');
+}
+async function submitList(){
+  const name=$('l-name').value.trim();
+  if(!name){toast('List name is required','err');return;}
+  const desc=$('l-desc').value.trim();
+  let error;
+  if(S.editLid){({error}=await sb.from('lists').update({name,description:desc||null,updated_at:new Date().toISOString()}).eq('id',S.editLid));}
+  else{({error}=await sb.from('lists').insert({user_id:S.user.id,name,description:desc||null}));}
+  if(error){toast(error.message,'err');return;}
+  closeModal('modal-list');await loadLists();
+  if(S.page==='dashboard')renderDash();
+  else{S.lname=name;$('list-title').textContent=name;}
+  toast(S.editLid?'List updated!':'List created!');
+}
+async function deleteList(lid){
+  if(!confirm('Delete this list and all items stored? This action cannot be undone.'))return;
+  await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('list_id',lid).is('deleted_at',null);
+  const{error}=await sb.from('lists').delete().eq('id',lid);
+  if(error){toast(error.message,'err');return;}
+  await loadLists();renderDash();toast('List deleted');
+}
+
+// ── GOODS ─────────────────────────────────────────────
+async function loadGoods(lid){
+  const{data}=await sb.from('goods').select('*').eq('list_id',lid).is('deleted_at',null).order('created_at',{ascending:false});
+  S.goods=data||[];
+}
+async function renderList(){
+  $('list-title').textContent=S.lname;
+  await loadGoods(S.lid);
+  const tb=$('goods-tbody');
+  if(!S.goods.length){tb.innerHTML=`<tr><td colspan="10" class="ec">No items yet. Click "+ Add Item" to get started.</td></tr>`;return;}
+  tb.innerHTML=S.goods.map(g=>{
+    const st=status(g.expiry_date);
+    const rc=st.cls==='bd'?'row-exp':st.cls==='bw'?'row-warn':'';
+    return `<tr class="${rc}">
+      <td><strong>${h(g.goods_name)}</strong></td>
+      <td><span class="type-b">${h(g.goods_type)}</span></td>
+      <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price,g.currency)}</td>
+      <td>${h(g.bought_from)||'—'}</td>
+      <td>${fmtDate(g.date_bought)}</td>
+      <td>${fmtDate(g.expiry_date)}</td>
+      <td>${fmtDate(g.warranty_expiry_date)}</td>
+      <td>${h(g.location_stored)||'—'}</td>
+      <td><span class="badge ${st.cls}">${st.lbl}</span></td>
+      <td class="ac">
+        <button class="btn-sec sm" style="margin-right:3px" onclick="openGoodModal('${a(g.id)}')">Edit</button>
+        <button class="btn-sec sm" style="margin-right:3px" title="Move or Duplicate" onclick="openMoveModal('${a(g.id)}')">⇄</button>
+        <button class="btn-d sm" onclick="softDel('${a(g.id)}')">Remove</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function openGoodModal(gid){
+  S.editGid=gid;S.fromSearch=false;
+  $('mg-title').textContent=gid?'Edit Item':'Add Item';
+  ['g-name','g-bf','g-db','g-exp','g-wv','g-wexp','g-loc','g-desc','g-price'].forEach(id=>$(id).value='');
+  $('g-type').value='Food';$('g-wu').value='months';$('g-curr').value='THB';
+  if(gid){
+    const{data}=await sb.from('goods').select('*').eq('id',gid).single();
+    if(data){
+      $('g-type').value=data.goods_type||'Others';
+      $('g-name').value=data.goods_name||'';
+      $('g-bf').value=data.bought_from||'';
+      $('g-db').value=data.date_bought||'';
+      $('g-exp').value=data.expiry_date||'';
+      $('g-wv').value=data.warranty_duration_value||'';
+      $('g-wu').value=data.warranty_duration_unit||'months';
+      $('g-wexp').value=data.warranty_expiry_date||'';
+      $('g-loc').value=data.location_stored||'';
+      $('g-desc').value=data.description||'';
+      $('g-price').value=data.price!=null?data.price:'';
+      $('g-curr').value=data.currency||'THB';
+    }
+  }
+  openModal('modal-good');
+}
+async function openGoodModalSearch(gid,lid){
+  S.fromSearch=true;S.lid=lid;
+  const l=S.lists.find(x=>x.id===lid);S.lname=l?l.name:'';
+  await openGoodModal(gid);
+}
+function calcWarranty(){
+  const v=$('g-wv').value,u=$('g-wu').value;
+  if(v&&parseInt(v)>0)$('g-wexp').value=addDur(v,u);
+}
+async function saveGood(){
+  const name=$('g-name').value.trim();
+  if(!name){toast('Goods name is required','err');return;}
+  const priceRaw=$('g-price').value;
+  const pay={
+    goods_type:$('g-type').value,goods_name:name,
+    bought_from:$('g-bf').value.trim()||null,
+    date_bought:$('g-db').value||null,
+    expiry_date:$('g-exp').value||null,
+    warranty_duration_value:$('g-wv').value?parseInt($('g-wv').value):null,
+    warranty_duration_unit:$('g-wu').value||null,
+    warranty_expiry_date:$('g-wexp').value||null,
+    location_stored:$('g-loc').value.trim()||null,
+    description:$('g-desc').value.trim()||null,
+    price:priceRaw!==''?parseFloat(priceRaw):null,
+    currency:$('g-curr').value||'THB',
+    updated_at:new Date().toISOString(),
+  };
+  let error;
+  if(S.editGid){({error}=await sb.from('goods').update(pay).eq('id',S.editGid));}
+  else{({error}=await sb.from('goods').insert({...pay,user_id:S.user.id,list_id:S.lid}));}
+  if(error){toast(error.message,'err');return;}
+  closeModal('modal-good');toast(S.editGid?'Item updated!':'Item added!');
+  // refresh item names cache
+  S.allItemNames=[...new Set([...S.allItemNames,name])].sort();
+  await checkExpiring();
+  if(S.fromSearch){S.fromSearch=false;await doSearch();}
+  else{await loadLists();await renderList();}
+}
+async function softDel(gid){
+  const g=S.goods.find(x=>x.id===gid);
+  const{error}=await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('id',gid);
+  if(error){toast(error.message,'err');return;}
+  toast(`"${g?.goods_name||'Item'}" moved to recycle bin`);
+  await checkExpiring();await loadLists();await renderList();
+}
+async function restoreGood(gid){
+  const{error}=await sb.from('goods').update({deleted_at:null}).eq('id',gid);
+  if(error){toast(error.message,'err');return;}
+  toast('Item restored!');await loadLists();await loadRecycle();await checkExpiring();
+}
+async function permDel(gid){
+  if(!confirm('Permanently delete? This cannot be undone.'))return;
+  const{error}=await sb.from('goods').delete().eq('id',gid);
+  if(error){toast(error.message,'err');return;}
+  toast('Permanently deleted');await loadLists();await loadRecycle();
+}
+async function purgeOldDeleted(){
+  const cut=new Date();cut.setDate(cut.getDate()-30);
+  await sb.from('goods').delete().eq('user_id',S.user.id).not('deleted_at','is',null).lt('deleted_at',cut.toISOString());
+}
+
+// ── MOVE / DUPLICATE ──────────────────────────────────
+async function openMoveModal(gid){
+  const g=S.goods.find(x=>x.id===gid);
+  if(!g)return;
+  S.moveGid=gid;
+  $('mv-item-name').textContent=g.goods_name;
+  const others=S.lists.filter(l=>l.id!==S.lid);
+  if(!others.length){toast('Create another list first to move or duplicate items.','err');return;}
+  $('mv-list').innerHTML=others.map(l=>`<option value="${a(l.id)}">${h(l.name)}</option>`).join('');
+  openModal('modal-move');
+}
+async function moveItem(){
+  const tLid=$('mv-list').value;
+  if(!tLid){toast('Select a target list','err');return;}
+  const{error}=await sb.from('goods').update({list_id:tLid,updated_at:new Date().toISOString()}).eq('id',S.moveGid);
+  if(error){toast(error.message,'err');return;}
+  closeModal('modal-move');toast('Item moved!');
+  await loadLists();await renderList();
+}
+async function duplicateItem(){
+  const tLid=$('mv-list').value;
+  if(!tLid){toast('Select a target list','err');return;}
+  const{data:g}=await sb.from('goods').select('*').eq('id',S.moveGid).single();
+  if(!g){toast('Item not found','err');return;}
+  const{id,created_at,updated_at,list_id,...rest}=g;
+  const{error}=await sb.from('goods').insert({...rest,list_id:tLid,user_id:S.user.id,deleted_at:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+  if(error){toast(error.message,'err');return;}
+  closeModal('modal-move');toast('Item duplicated to target list!');
+  await loadLists();
+}
+
+// ── STORES ────────────────────────────────────────────
+async function loadStores(){
+  const{data,error}=await sb.from('stores').select('name').order('name');
+  if(error){console.warn('stores table unavailable:',error.message);return;}
+  S.stores=data||[];
+}
+// shared autocomplete for "bought from" fields
+function showBfSugg(val,ddId){
+  const dd=$(ddId);
+  if(!val||val.length<1){dd.style.display='none';return;}
+  const low=val.toLowerCase();
+  const all=[...S.stores.map(s=>s.name),'Others'];
+  const unique=[...new Set(all)];
+  const matches=unique.filter(n=>n.toLowerCase().includes(low)).slice(0,8);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.innerHTML=matches.map(n=>`<div class="sugg-item" onmousedown="pickBfSugg('${a(n)}','${ddId}')">${highlight(n,val)}</div>`).join('');
+  dd.style.display='block';
+}
+function pickBfSugg(name,ddId){
+  // determine which input to fill based on the dropdown id
+  const inputId=ddId==='g-bf-sugg'?'g-bf':'f-bf';
+  $(inputId).value=name;hideSugg(ddId);
+  if(ddId==='f-bf-sugg')doSearch();
+}
+function hideSugg(ddId){const dd=$(ddId);if(dd)dd.style.display='none';}
+
+// ── NOTIFICATIONS ─────────────────────────────────────
+async function checkExpiring(){
+  const wk=new Date();wk.setDate(wk.getDate()+7);
+  const{data}=await sb.from('goods').select('id,goods_name,expiry_date,list_id').eq('user_id',S.user.id).is('deleted_at',null).not('expiry_date','is',null).lte('expiry_date',wk.toISOString().split('T')[0]);
+  S.expiring=(data||[]).filter(i=>!S.dismissed.has(i.id));
+  renderNotifs();
+}
+function renderNotifs(){
+  const bar=$('notif-bar');
+  if(!S.expiring.length){bar.style.display='none';return;}
+  bar.style.display='block';
+  bar.innerHTML=S.expiring.map(item=>{
+    const d=daysTo(item.expiry_date);
+    const list=S.lists.find(l=>l.id===item.list_id);
+    const listName=list?` in <strong>${h(list.name)}</strong>`:'';
+    const msg=d<0?`<strong>${h(item.goods_name)}</strong>${listName} expired on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`
+      :d===0?`<strong>${h(item.goods_name)}</strong>${listName} expires today, do you want to remove it from the list?`
+      :`<strong>${h(item.goods_name)}</strong>${listName} will expire on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`;
+     return `<div class="notif-item">
+      <span class="notif-ic">${d<=0?'🔴':'⚠️'}</span>
+      <span class="notif-msg">${msg}</span>
+      <div class="notif-acts">
+        <button class="btn-d sm" onclick="notifRemove('${a(item.id)}','${a(item.list_id)}')">Remove</button>
+        <button class="btn-g sm" style="background:rgba(0,0,0,.06)" onclick="notifDismiss('${a(item.id)}')">Dismiss</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function notifDismiss(id){S.dismissed.add(id);S.expiring=S.expiring.filter(i=>i.id!==id);renderNotifs();}
+async function notifRemove(id,lid){
+  await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('id',id);
+  S.dismissed.add(id);S.expiring=S.expiring.filter(i=>i.id!==id);renderNotifs();
+  if(S.lid===lid&&S.page==='list-detail')await renderList();
+  await loadLists();toast('Item removed');
+}
+
+// ── SEARCH ────────────────────────────────────────────
+async function initSearch(){
+  const sel=$('f-list');
+  sel.innerHTML='<option value="">All Lists</option>'+S.lists.map(l=>`<option value="${a(l.id)}">${h(l.name)}</option>`).join('');
+  // load all item names for keyword suggestions
+  const{data}=await sb.from('goods').select('goods_name').eq('user_id',S.user.id).is('deleted_at',null);
+  S.allItemNames=[...new Set((data||[]).map(g=>g.goods_name).filter(Boolean))].sort();
+}
+
+// keyword autocomplete with keyboard nav
+let _kwMatches=[];
+function showKwSugg(val){
+  const dd=$('kw-sugg');S.kwIdx=-1;
+  if(!val||val.length<1){dd.style.display='none';_kwMatches=[];return;}
+  const low=val.toLowerCase();
+  _kwMatches=S.allItemNames.filter(n=>n.toLowerCase().includes(low)).slice(0,8);
+  if(!_kwMatches.length){dd.style.display='none';return;}
+  renderKwSugg(val);dd.style.display='block';
+}
+function renderKwSugg(query){
+  $('kw-sugg').innerHTML=_kwMatches.map((n,i)=>`<div class="sugg-item${S.kwIdx===i?' highlighted':''}" onmousedown="pickKwSugg('${a(n)}')">${highlight(n,query)}</div>`).join('');
+}
+function pickKwSugg(name){$('f-kw').value=name;hideKwSugg();doSearch();}
+function hideKwSugg(){$('kw-sugg').style.display='none';S.kwIdx=-1;}
+function handleKwKey(e){
+  if(!_kwMatches.length)return;
+  if(e.key==='ArrowDown'){e.preventDefault();S.kwIdx=Math.min(S.kwIdx+1,_kwMatches.length-1);renderKwSugg($('f-kw').value);}
+  else if(e.key==='ArrowUp'){e.preventDefault();S.kwIdx=Math.max(S.kwIdx-1,-1);renderKwSugg($('f-kw').value);}
+  else if(e.key==='Enter'){
+    if(S.kwIdx>=0){pickKwSugg(_kwMatches[S.kwIdx]);}
+    else{hideKwSugg();doSearch();}
+  }else if(e.key==='Escape'){hideKwSugg();}
+}
+async function doSearch(){
+  const kw=$('f-kw').value.trim(),type=$('f-type').value,bf=$('f-bf').value.trim();
+  const lid=$('f-list').value,df=$('f-df').value,dt=$('f-dt').value,ef=$('f-ef').value,et=$('f-et').value;
+  let q=sb.from('goods').select('*,lists(name)').eq('user_id',S.user.id).is('deleted_at',null).order('goods_name');
+  if(kw)q=q.or(`goods_name.ilike.%${kw}%,bought_from.ilike.%${kw}%,location_stored.ilike.%${kw}%,description.ilike.%${kw}%`);
+  if(type)q=q.eq('goods_type',type);
+  if(bf)q=q.ilike('bought_from',`%${bf}%`);
+  if(lid)q=q.eq('list_id',lid);
+  if(df)q=q.gte('date_bought',df);
+  if(dt)q=q.lte('date_bought',dt);
+  if(ef)q=q.gte('expiry_date',ef);
+  if(et)q=q.lte('expiry_date',et);
+  const{data,error}=await q;
+  if(error){toast(error.message,'err');return;}
+  renderSearchResults(data||[]);
+}
+function clearSearch(){
+  ['f-kw','f-bf','f-df','f-dt','f-ef','f-et'].forEach(id=>$(id).value='');
+  $('f-type').value='';$('f-list').value='';
+  $('search-results').innerHTML='';hideKwSugg();hideSugg('f-bf-sugg');
+}
+function renderSearchResults(res){
+  const c=$('search-results');
+  if(!res.length){c.innerHTML=`<div class="empty"><div class="empty-ic">🔍</div><p>No items found. Try different filters.</p></div>`;return;}
+  c.innerHTML=`<div class="tw"><table class="gt">
+    <thead><tr><th>Name</th><th>Type</th><th>Price</th><th>List</th><th>Bought From</th><th>Date Bought</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${res.map(g=>{
+      const st=status(g.expiry_date);
+      const rc=st.cls==='bd'?'row-exp':st.cls==='bw'?'row-warn':'';
+      return `<tr class="${rc}">
+        <td><strong>${h(g.goods_name)}</strong></td>
+        <td><span class="type-b">${h(g.goods_type)}</span></td>
+        <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price,g.currency)}</td>
+        <td>${h(g.lists?.name)||'—'}</td>
+        <td>${h(g.bought_from)||'—'}</td>
+        <td>${fmtDate(g.date_bought)}</td>
+        <td>${fmtDate(g.expiry_date)}</td>
+        <td><span class="badge ${st.cls}">${st.lbl}</span></td>
+        <td><button class="btn-sec sm" onclick="openGoodModalSearch('${a(g.id)}','${a(g.list_id)}')">Edit</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── RECYCLE BIN ───────────────────────────────────────
+async function loadRecycle(){
+  const{data}=await sb.from('goods').select('*,lists(name)').eq('user_id',S.user.id).not('deleted_at','is',null).order('deleted_at',{ascending:false});
+  const items=data||[],c=$('recycle-list');
+  if(!items.length){c.innerHTML=`<div class="empty"><div class="empty-ic">🗑️</div><p>Recycle bin is empty.</p></div>`;return;}
+  c.innerHTML=`<div class="tw"><table class="gt">
+    <thead><tr><th>Name</th><th>Type</th><th>Price</th><th>List</th><th>Expiry</th><th>Removed On</th><th>Auto-Delete In</th><th>Actions</th></tr></thead>
+    <tbody>${items.map(g=>{
+      const ago=Math.floor((Date.now()-new Date(g.deleted_at))/86400000);
+      const left=Math.max(0,30-ago);
+      return `<tr>
+        <td><strong>${h(g.goods_name)}</strong></td>
+        <td><span class="type-b">${h(g.goods_type)}</span></td>
+        <td style="white-space:nowrap">${fmtPrice(g.price,g.currency)}</td>
+        <td>${h(g.lists?.name)||'—'}</td>
+        <td>${fmtDate(g.expiry_date)}</td>
+        <td>${fmtDate(g.deleted_at.split('T')[0])}</td>
+        <td><span class="badge ${left<=3?'bd':left<=7?'bw':'bg'}">${left} day${left!==1?'s':''}</span></td>
+        <td class="ac">
+          <button class="btn-s sm" style="margin-right:3px" onclick="restoreGood('${a(g.id)}')">Restore</button>
+          <button class="btn-d sm" onclick="permDel('${a(g.id)}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── BOOTSTRAP ─────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user){S.user=session.user;await initApp();}
+  sb.auth.onAuthStateChange(async(evt)=>{
+    if(evt==='SIGNED_OUT'){$('app-screen').style.display='none';$('auth-screen').style.display='flex';}
+  });
+});
+</script>
+</body>
+</html>
