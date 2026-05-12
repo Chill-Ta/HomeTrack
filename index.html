@@ -1,251 +1,602 @@
 <!DOCTYPE html>
+<!-- กำหนดประเภทเอกสารเป็น HTML5 มาตรฐาน ทำให้ browser ทำงานใน "standards mode" แทน "quirks mode" -->
+
 <html lang="en">
+<!-- <html> คือ root element ของทุกหน้าเว็บ
+     lang="en" บอก browser, screen reader, และ search engine ว่าเนื้อหาหลักเป็นภาษาอังกฤษ -->
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>HomeTrack – Home Goods Tracker</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- <head> เก็บ metadata ที่ไม่แสดงผลบนหน้าเว็บ แต่จำเป็นต่อการทำงาน -->
+
+  <meta charset="UTF-8">
+  <!-- กำหนด character encoding เป็น UTF-8 รองรับทุกภาษา รวมถึงภาษาไทยและอีโมจิ
+       ต้องอยู่บนสุดของ <head> เพื่อให้ browser อ่าน encoding ได้ก่อนแปล content -->
+
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <!-- ทำให้หน้าเว็บ responsive บนอุปกรณ์มือถือ
+       width=device-width  → ความกว้าง viewport เท่ากับหน้าจออุปกรณ์
+       initial-scale=1.0   → ไม่ zoom อัตโนมัติตอนโหลดหน้าครั้งแรก -->
+
+  <title>HomeTrack – Home Goods Tracker</title>
+  <!-- ชื่อที่แสดงบน browser tab, bookmark, และผลการค้นหา (SEO) -->
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- โหลด Supabase JavaScript Client Library เวอร์ชัน 2 จาก CDN (jsdelivr.net)
+       ใช้ CDN เพราะโปรเจกต์นี้เป็น single HTML file ไม่มี build tool (npm/webpack)
+       library จะสร้าง global object ชื่อ 'supabase' ที่ใช้เชื่อมต่อ Supabase Cloud
+       ต้องโหลดก่อน <script> ของเราที่อยู่ท้าย body เพื่อให้ใช้ supabase object ได้ -->
+
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#1f2937;line-height:1.5;font-size:14px}
-button{cursor:pointer;font-family:inherit;font-size:14px;border:none;outline:none}
-input,select,textarea{font-family:inherit;font-size:14px;outline:none}
-a{text-decoration:none;cursor:pointer}
-table{border-collapse:collapse;width:100%}
-:root{
-  --p:#6366f1;--pd:#4f46e5;--pl:#eef2ff;
-  --d:#ef4444;--dl:#fef2f2;
-  --w:#f59e0b;--wl:#fffbeb;
-  --s:#10b981;--sl:#ecfdf5;
-  --sb:#1e1b4b;--border:#e5e7eb;
-  --card:#fff;--bg:#f3f4f6;--text:#1f2937;--muted:#6b7280;
-  --sha:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
-  --shm:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
-  --r:8px;--sw:240px
+/* ══════════════════════════════════════════════════════════════════
+   RESET & BASE STYLES
+   รีเซ็ต default styles ที่ browser แต่ละตัวตั้งค่าต่างกัน
+   เพื่อให้หน้าเว็บแสดงผลสม่ำเสมอทุก browser
+   ══════════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after {
+  box-sizing: border-box; /* padding/border นับรวมใน width/height ป้องกัน element ล้นกว่าที่กำหนด */
+  margin: 0;              /* ลบ margin default (browser ใส่ margin ให้ h1-h6, p, ul ฯลฯ โดยอัตโนมัติ) */
+  padding: 0              /* ลบ padding default (browser ใส่ padding ให้ ul, ol ฯลฯ) */
 }
-/* AUTH */
-#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#6366f1,#4f46e5 50%,#1e1b4b)}
-.auth-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.auth-logo{font-size:36px;text-align:center;margin-bottom:6px}
-.auth-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
-.auth-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
-.auth-tabs{display:flex;background:var(--bg);border-radius:var(--r);padding:4px;margin-bottom:20px}
-.auth-tab{flex:1;padding:8px;border-radius:6px;font-weight:500;color:var(--muted);background:transparent;transition:all .2s}
-.auth-tab.active{background:#fff;color:var(--p);box-shadow:var(--sha)}
-/* LAYOUT */
-#app-screen{display:flex;min-height:100vh}
-.sidebar{width:var(--sw);background:var(--sb);color:#fff;position:fixed;left:0;top:0;bottom:0;display:flex;flex-direction:column;z-index:100}
-.sb-brand{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
-.sb-logo{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
-.sb-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px}
-.sb-nav{flex:1;padding:10px 0}
-.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.6);font-weight:500;transition:all .15s;border-left:3px solid transparent}
-.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
-.nav-item.active{background:rgba(99,102,241,.25);color:#fff;border-left-color:var(--p)}
-.nav-ic{font-size:16px;width:20px}
-.sb-foot{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
-.user-mail{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:8px;word-break:break-all}
-.main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh}
-/* NOTIF */
-#notif-bar{background:#fffbeb;border-bottom:2px solid #fde68a;display:none}
-.notif-item{display:flex;align-items:center;gap:12px;padding:11px 24px;border-bottom:1px solid #fde68a}
-.notif-item:last-child{border-bottom:none}
-.notif-ic{font-size:15px;flex-shrink:0}
-.notif-msg{flex:1;font-size:13px;color:#92400e}
-.notif-msg strong{color:#78350f}
-.notif-acts{display:flex;gap:6px;flex-shrink:0}
-/* PAGE */
-.pw{padding:32px;flex:1}
-.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
-.ph h1{font-size:24px;font-weight:700}
-.ph h2{font-size:20px;font-weight:700}
-.breadcrumb{display:flex;align-items:center;gap:8px}
-.bc-sep{color:var(--muted)}
-.ha{display:flex;gap:10px}
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sha);padding:24px}
-/* LIST CARDS */
-.lists-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.list-card{background:var(--card);border-radius:12px;padding:20px;box-shadow:var(--sha);cursor:pointer;transition:all .2s;border:1.5px solid var(--border)}
-.list-card:hover{box-shadow:var(--shm);transform:translateY(-2px)}
-.list-card.lc-exp{border-color:var(--d)!important;background:linear-gradient(135deg,#fff,#fff7f7)!important}
-.list-card.lc-warn{border-color:var(--w)!important;background:linear-gradient(135deg,#fff,#fffeee)!important}
-.list-card:not(.lc-exp):not(.lc-warn):hover{border-color:var(--p)}
-.lc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
-.lc-head h3{font-size:15px;font-weight:600;flex:1;margin-right:8px}
-.lc-acts{display:flex;gap:4px}
-.lc-desc{font-size:13px;color:var(--muted);margin-bottom:8px}
-.lc-alert-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.lc-alert{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
-.lc-alert.exp{background:var(--dl);color:var(--d)}
-.lc-alert.soon{background:var(--wl);color:#92400e}
-.lc-foot{display:flex;align-items:center;justify-content:space-between}
-.item-count{font-size:12px;font-weight:600;color:var(--p);background:var(--pl);padding:2px 10px;border-radius:20px}
-.lc-date{font-size:12px;color:var(--muted)}
-/* TABLE */
-.tw{background:var(--card);border-radius:var(--r);box-shadow:var(--sha);overflow:hidden;overflow-x:auto}
-.gt th,.gt td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--border);vertical-align:middle}
-.gt th{background:#f9fafb;font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-.gt tr:last-child td{border-bottom:none}
-.gt tr:hover td{background:#fafafa}
-.row-exp td{background:#fef2f2!important}
-.row-exp:hover td{background:#fee2e2!important}
-.row-warn td{background:#fffbeb!important}
-.row-warn:hover td{background:#fef3c7!important}
-.ac{white-space:nowrap}
-.ec{text-align:center;color:var(--muted);padding:48px!important;font-size:14px}
-/* BADGES */
-.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.bd{background:var(--dl);color:var(--d)}.bw{background:var(--wl);color:#92400e}
-.bs{background:var(--sl);color:#065f46}.bg{background:#f3f4f6;color:var(--muted)}
-.type-b{background:var(--pl);color:var(--pd);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
-/* BUTTONS */
-.btn-p{background:var(--p);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500;transition:background .15s}
-.btn-p:hover{background:var(--pd)}
-.btn-sec{background:#fff;color:var(--text);border:1.5px solid var(--border);padding:8px 18px;border-radius:var(--r);font-weight:500;transition:all .15s}
-.btn-sec:hover{border-color:var(--p);color:var(--p)}
-.btn-g{background:transparent;color:var(--muted);padding:8px 14px;border-radius:var(--r);font-weight:500;transition:all .15s}
-.btn-g:hover{background:var(--bg);color:var(--text)}
-.btn-d{background:var(--d);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500}
-.btn-d:hover{background:#dc2626}
-.btn-s{background:var(--s);color:#fff;padding:8px 18px;border-radius:var(--r);font-weight:500}
-.btn-s:hover{background:#059669}
-.sm{padding:4px 10px!important;font-size:12px!important;border-radius:6px!important}
-.full{width:100%;padding:12px;font-size:15px;font-weight:600}
-.icon-btn{background:transparent;color:var(--muted);padding:4px 6px;border-radius:4px;font-size:14px;transition:all .15s}
-.icon-btn:hover{background:var(--bg);color:var(--text)}
-/* FORMS */
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:13px;font-weight:500}
-.hint{font-size:11px;font-weight:400;color:var(--muted)}
-.fg input,.fg select,.fg textarea{border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);background:#fff;transition:border-color .15s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08)}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.sect{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.warr-row{display:grid;grid-template-columns:1fr 130px;gap:12px}
-.filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:16px}
-/* PRICE ROW */
-.price-row{display:flex;gap:6px}
-.price-row select{width:110px;border:1.5px solid var(--border);border-radius:var(--r);padding:9px 8px;color:var(--text);background:#fff;font-family:inherit;font-size:14px;cursor:pointer;transition:border-color .15s}
-.price-row select:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08);outline:none}
-.price-row input{flex:1;border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);background:#fff;transition:border-color .15s}
-.price-row input:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(99,102,241,.08);outline:none}
-/* AUTOCOMPLETE */
-.sugg-wrap{position:relative}
-.sugg-dd{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1.5px solid var(--p);border-top:none;border-radius:0 0 var(--r) var(--r);box-shadow:var(--shm);z-index:300;max-height:210px;overflow-y:auto;display:none}
-.sugg-item{padding:9px 13px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)}
-.sugg-item:last-child{border-bottom:none}
-.sugg-item:hover,.sugg-item.highlighted{background:var(--pl);color:var(--pd)}
-.sugg-item mark{background:transparent;color:var(--pd);font-weight:700}
-/* MODAL */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
-.mc{background:#fff;border-radius:16px;width:100%;max-width:660px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
-.mc.sm{max-width:440px}
-.mh{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border)}
-.mh h2{font-size:17px;font-weight:700}
-.xbtn{background:transparent;color:var(--muted);font-size:20px;padding:4px 8px;border-radius:6px;line-height:1}
-.xbtn:hover{background:var(--bg);color:var(--text)}
-.mb{padding:22px 24px;overflow-y:auto;flex:1}
-.mf{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border)}
-/* MOVE/DUP info box */
-.info-box{background:#f8f9ff;border:1.5px solid #c7d2fe;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#3730a3;line-height:1.7;margin-top:14px}
-/* EMPTY */
-.empty{text-align:center;padding:60px 20px}
-.empty-ic{font-size:48px;margin-bottom:16px}
-.empty p{color:var(--muted);font-size:15px}
-/* TOAST */
-#toasts{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px}
-.toast{background:#1f2937;color:#fff;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:500;box-shadow:var(--shm);transform:translateY(16px);opacity:0;transition:all .3s;pointer-events:none}
-.toast.show{transform:translateY(0);opacity:1}
-.toast.ok{background:#065f46}
-.toast.err{background:#991b1b}
-.mt2{margin-top:8px}.mt3{margin-top:12px}.mt4{margin-top:16px}
-.muted{color:var(--muted);font-size:13px}
+body {
+  /* System font stack: ใช้ font ที่มีอยู่แล้วใน OS ไม่ดาวน์โหลดเพิ่ม โหลดเร็วกว่า web font
+     -apple-system = San Francisco (macOS/iOS), BlinkMacSystemFont = Chrome บน Mac,
+     Segoe UI = Windows, Roboto = Android, sans-serif = fallback */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f3f4f6;  /* พื้นหลังเทาอ่อน (Gray-100) สร้าง contrast กับ card สีขาว */
+  color: #1f2937;        /* สีตัวอักษรหลัก (Gray-800) เกือบดำ แต่ไม่ดำจัด อ่านง่ายกว่า #000 */
+  line-height: 1.5;      /* ระยะห่างระหว่างบรรทัด 1.5 เท่าของ font-size ช่วยให้อ่านสบายตา */
+  font-size: 14px        /* ขนาด font พื้นฐาน 14px เหมาะสำหรับ UI application (ไม่ใหญ่เกินไป) */
+}
+button {
+  cursor: pointer;      /* เปลี่ยน mouse pointer เป็นรูปมือเมื่อ hover บนปุ่ม */
+  font-family: inherit; /* รับ font จาก body เพราะ browser ตั้ง button font ต่างจาก body */
+  font-size: 14px;      /* กำหนดขนาด font ให้สม่ำเสมอ เพราะ browser ตั้ง button size ต่างกัน */
+  border: none;         /* ลบ border default ของ <button> */
+  outline: none         /* ลบ outline default เมื่อ focus (จะ style focus ด้วย CSS เองแทน) */
+}
+input, select, textarea {
+  font-family: inherit; /* รับ font จาก body ป้องกัน browser ใช้ font อื่นใน form element */
+  font-size: 14px;      /* กำหนดขนาดให้สม่ำเสมอทุก form element */
+  outline: none         /* ลบ outline default รับมือ accessibility ด้วย box-shadow แทน */
+}
+a {
+  text-decoration: none; /* ลบ underline default ของ <a> จะ style เองด้วย CSS */
+  cursor: pointer        /* ให้ cursor เป็นรูปมือแม้ไม่มี href (ใช้ <a> เป็น nav button) */
+}
+table {
+  border-collapse: collapse; /* รวม border ของ cell ที่ติดกัน ป้องกัน double border */
+  width: 100%                /* ตารางขยายเต็มความกว้าง container */
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES (DESIGN TOKENS)
+   ตัวแปร CSS ส่วนกลาง กำหนดสีและขนาดทั้ง app ไว้ที่ :root
+   เหตุผล: แก้ไขที่เดียวมีผลทั่ว app, อ่านง่าย, บำรุงรักษาง่าย
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --p:  #6366f1;   /* Primary = Indigo-500 ใช้สำหรับปุ่มหลัก, link, highlight, focus */
+  --pd: #4f46e5;   /* Primary Dark = Indigo-600 ใช้เมื่อ hover ปุ่ม primary (เข้มขึ้น) */
+  --pl: #eef2ff;   /* Primary Light = Indigo-50 ใช้เป็น background badge, selected state */
+  --d:  #ef4444;   /* Danger = Red-500 ใช้แสดง error, expired, delete */
+  --dl: #fef2f2;   /* Danger Light = Red-50 ใช้เป็น background row/badge error */
+  --w:  #f59e0b;   /* Warning = Amber-500 ใช้สำหรับสินค้าใกล้หมดอายุ */
+  --wl: #fffbeb;   /* Warning Light = Amber-50 ใช้เป็น background row/badge warning */
+  --s:  #10b981;   /* Success = Emerald-500 ใช้แสดงสถานะ OK, restore, บันทึกสำเร็จ */
+  --sl: #ecfdf5;   /* Success Light = Emerald-50 ใช้เป็น background badge success */
+  --sb: #1e1b4b;   /* Sidebar BG = Indigo-950 สีเข้มมาก สร้าง contrast กับเนื้อหาหลัก */
+  --border: #e5e7eb; /* สีเส้น border ทั่วไป (Gray-200) */
+  --card:   #fff;    /* สีพื้นหลัง card component */
+  --bg:     #f3f4f6; /* สีพื้นหลัง page (Gray-100) */
+  --text:   #1f2937; /* สีตัวอักษรหลัก (Gray-800) */
+  --muted:  #6b7280; /* สีตัวอักษรรอง (Gray-500) ใช้สำหรับ label, placeholder */
+  --sha: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06); /* shadow เล็ก (card ปกติ) */
+  --shm: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06); /* shadow กลาง (card hover) */
+  --r:  8px;    /* border-radius มาตรฐาน ใช้กับ input, button, card */
+  --sw: 240px   /* Sidebar Width ความกว้าง sidebar ใช้ทั้งใน sidebar และ margin-left ของ main */
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AUTH SCREEN — หน้า Login / Sign Up
+   แสดงตอนยังไม่ได้ login, ซ่อนเมื่อ login สำเร็จ
+   ══════════════════════════════════════════════════════════════════ */
+#auth-screen {
+  display: flex;              /* ใช้ flexbox จัด content ให้อยู่กึ่งกลาง */
+  align-items: center;        /* จัดแนวตั้งกึ่งกลาง */
+  justify-content: center;    /* จัดแนวนอนกึ่งกลาง */
+  min-height: 100vh;          /* สูงเต็มหน้าจอ (Viewport Height) */
+  /* Gradient background สีม่วง-กรม สร้าง visual impact บนหน้า login */
+  background: linear-gradient(135deg, #6366f1, #4f46e5 50%, #1e1b4b)
+}
+.auth-card {
+  background: #fff;          /* card สีขาว contrast กับ background มืด */
+  border-radius: 16px;       /* มุมโค้งใหญ่ ดูทันสมัย */
+  padding: 40px;             /* ระยะห่างภายใน card */
+  width: 100%;               /* ขยายเต็มความกว้าง (แต่จำกัดด้วย max-width) */
+  max-width: 420px;          /* ความกว้างสูงสุด ป้องกัน card กว้างเกินบนหน้าจอใหญ่ */
+  box-shadow: 0 20px 60px rgba(0,0,0,.3) /* shadow เข้มเพื่อยกให้ card ดูลอยบน background */
+}
+.auth-logo { font-size: 36px; text-align: center; margin-bottom: 6px }  /* อีโมจิ icon ขนาดใหญ่ */
+.auth-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 4px }
+.auth-sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px }
+.auth-tabs {
+  display: flex;                    /* ปุ่ม Login/Sign Up วางเรียงในแนวนอน */
+  background: var(--bg);            /* พื้นหลังเทา ทำให้ปุ่ม active ดูโดดเด่น */
+  border-radius: var(--r);          /* มุมโค้งสม่ำเสมอกับ design system */
+  padding: 4px;                     /* padding ภายใน container ทำให้ tab ดู "ลอย" เมื่อ active */
+  margin-bottom: 20px
+}
+.auth-tab {
+  flex: 1;                           /* แบ่งพื้นที่เท่ากัน 2 ปุ่ม */
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: 500;
+  color: var(--muted);               /* inactive tab สีเทา */
+  background: transparent;
+  transition: all .2s                /* animation เมื่อสลับ tab */
+}
+.auth-tab.active {
+  background: #fff;                  /* active tab ดูยกขึ้นมาจาก container */
+  color: var(--p);                   /* active tab สีม่วง (primary) */
+  box-shadow: var(--sha)             /* shadow เสริมความรู้สึก "raised" */
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   APP LAYOUT — โครงสร้างหลักหลัง login
+   ใช้ Flexbox: sidebar (fixed ซ้าย) + main content (ขวา)
+   ══════════════════════════════════════════════════════════════════ */
+#app-screen { display: flex; min-height: 100vh } /* flex container หลัก */
+
+/* SIDEBAR — แถบนำทางด้านซ้าย */
+.sidebar {
+  width: var(--sw);         /* ความกว้าง 240px จาก CSS variable */
+  background: var(--sb);    /* พื้นหลังสีเข้ม Indigo-950 */
+  color: #fff;
+  position: fixed;          /* fixed ทำให้ sidebar ติดหน้าจอเมื่อ scroll เนื้อหา */
+  left: 0; top: 0; bottom: 0; /* ครอบทั้งความสูง viewport */
+  display: flex;
+  flex-direction: column;   /* จัด brand, nav, footer ในแนวตั้ง */
+  z-index: 100              /* sidebar อยู่บน content เมื่อมี overlap */
+}
+.sb-brand { padding: 24px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.08) }
+/* เส้น divider ใต้ brand ใช้สีขาว opacity ต่ำ เพราะ background เข้ม */
+.sb-logo { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px }
+.sb-sub { font-size: 11px; color: rgba(255,255,255,.35); margin-top: 2px }
+/* subtitle ใช้ opacity ต่ำ (35%) เพราะเป็น secondary info บน dark background */
+.sb-nav { flex: 1; padding: 10px 0 }
+/* flex:1 ทำให้ nav ขยายเต็มพื้นที่ระหว่าง brand กับ footer */
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 20px;
+  color: rgba(255,255,255,.6);     /* inactive: ขาว 60% opacity */
+  font-weight: 500;
+  transition: all .15s;            /* animation เมื่อ hover/active */
+  border-left: 3px solid transparent /* placeholder สำหรับ active indicator */
+}
+.nav-item:hover { background: rgba(255,255,255,.07); color: #fff }
+/* hover: เพิ่ม overlay ขาวโปร่งใส และตัวอักษรขาวเต็ม */
+.nav-item.active {
+  background: rgba(99,102,241,.25); /* สีม่วงโปร่งใส highlight nav ที่เลือก */
+  color: #fff;
+  border-left-color: var(--p)       /* เส้นแดงซ้าย (Primary color) บอกหน้าที่กำลังอยู่ */
+}
+.sb-foot { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.08) }
+.user-mail { font-size: 11px; color: rgba(255,255,255,.45); margin-bottom: 8px; word-break: break-all }
+/* word-break:break-all ป้องกัน email ยาวล้น sidebar */
+
+/* MAIN CONTENT AREA */
+.main {
+  margin-left: var(--sw); /* เว้นพื้นที่ซ้ายสำหรับ fixed sidebar (240px) */
+  flex: 1;                /* ขยายเต็มพื้นที่ที่เหลือ */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NOTIFICATION BAR — แถบแจ้งเตือนสินค้าหมดอายุ
+   แสดงที่ด้านบนของ main content
+   ══════════════════════════════════════════════════════════════════ */
+#notif-bar { background: #fffbeb; border-bottom: 2px solid #fde68a; display: none }
+/* ซ่อนเริ่มต้น (display:none) แสดงเมื่อมีสินค้าใกล้หมดอายุ */
+/* สีเหลืองอ่อน (amber) สื่อถึง warning โดยไม่ต้องอ่านข้อความ */
+.notif-item { display: flex; align-items: center; gap: 12px; padding: 11px 24px; border-bottom: 1px solid #fde68a }
+.notif-item:last-child { border-bottom: none } /* ลบ border บรรทัดสุดท้าย ป้องกัน double border */
+.notif-ic { font-size: 15px; flex-shrink: 0 }  /* flex-shrink:0 ป้องกัน icon หด */
+.notif-msg { flex: 1; font-size: 13px; color: #92400e } /* ข้อความหลัก ขยายเต็มพื้นที่ */
+.notif-msg strong { color: #78350f }            /* ชื่อสินค้าเข้มขึ้น */
+.notif-acts { display: flex; gap: 6px; flex-shrink: 0 } /* กลุ่มปุ่ม action ไม่หด */
+
+/* PAGE LAYOUT */
+.pw { padding: 32px; flex: 1 }  /* padding ของแต่ละ page content */
+.ph {
+  display: flex; align-items: center;
+  justify-content: space-between; /* ชื่อหน้าซ้าย, ปุ่มขวา */
+  margin-bottom: 28px;
+  flex-wrap: wrap; gap: 12px     /* wrap บนหน้าจอเล็ก */
+}
+.breadcrumb { display: flex; align-items: center; gap: 8px }
+.ha { display: flex; gap: 10px }   /* header actions กลุ่มปุ่มขวา */
+.card { background: var(--card); border-radius: var(--r); box-shadow: var(--sha); padding: 24px }
+
+/* ══════════════════════════════════════════════════════════════════
+   LIST CARDS — card แสดงรายการ (Lists) บนหน้า Dashboard
+   ══════════════════════════════════════════════════════════════════ */
+.lists-grid {
+  display: grid;
+  /* auto-fill สร้าง column อัตโนมัติตามความกว้าง, minmax ไม่ต่ำกว่า 280px */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px
+}
+.list-card {
+  background: var(--card); border-radius: 12px; padding: 20px;
+  box-shadow: var(--sha);
+  cursor: pointer;
+  transition: all .2s;           /* animation smooth เมื่อ hover */
+  border: 1.5px solid var(--border)
+}
+.list-card:hover { box-shadow: var(--shm); transform: translateY(-2px) }
+/* hover: shadow ใหญ่ขึ้นและยก card 2px สร้าง "lift" effect */
+
+/* LIST CARD EXPIRY HIGHLIGHTING */
+.list-card.lc-exp {
+  border-color: var(--d) !important;                    /* border แดง = มีสินค้าหมดอายุ */
+  background: linear-gradient(135deg,#fff,#fff7f7) !important /* gradient แดงอ่อนมาก */
+}
+.list-card.lc-warn {
+  border-color: var(--w) !important;                    /* border ส้ม = มีสินค้าใกล้หมดอายุ */
+  background: linear-gradient(135deg,#fff,#fffeee) !important
+}
+.list-card:not(.lc-exp):not(.lc-warn):hover { border-color: var(--p) }
+/* card ปกติ (ไม่มี expired): hover เปลี่ยน border เป็นสีม่วง */
+
+.lc-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px }
+.lc-head h3 { font-size: 15px; font-weight: 600; flex: 1; margin-right: 8px }
+.lc-acts { display: flex; gap: 4px }    /* ปุ่ม edit/delete บน card */
+.lc-desc { font-size: 13px; color: var(--muted); margin-bottom: 8px }
+.lc-alert-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px }
+.lc-alert { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px }
+.lc-alert.exp { background: var(--dl); color: var(--d) }   /* badge "X expired" สีแดง */
+.lc-alert.soon { background: var(--wl); color: #92400e }   /* badge "X expiring" สีส้ม */
+.lc-foot { display: flex; align-items: center; justify-content: space-between }
+.item-count { font-size: 12px; font-weight: 600; color: var(--p); background: var(--pl); padding: 2px 10px; border-radius: 20px }
+.lc-date { font-size: 12px; color: var(--muted) }
+
+/* ══════════════════════════════════════════════════════════════════
+   TABLE — ตารางแสดงรายการสินค้า (Goods Table)
+   ══════════════════════════════════════════════════════════════════ */
+.tw {
+  background: var(--card); border-radius: var(--r);
+  box-shadow: var(--sha);
+  overflow: hidden;      /* ซ่อน content ที่ล้น border-radius */
+  overflow-x: auto       /* scroll แนวนอนเมื่อตารางกว้างกว่า container (responsive) */
+}
+.gt th, .gt td {
+  padding: 10px 13px;
+  text-align: left;
+  border-bottom: 1px solid var(--border); /* เส้นแบ่ง row */
+  vertical-align: middle  /* จัด content ตรงกลางแนวตั้ง */
+}
+.gt th {
+  background: #f9fafb;    /* พื้นหลัง header row เทาอ่อน สร้าง contrast */
+  font-weight: 600; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; /* header เป็นตัวพิมพ์ใหญ่ ดูเป็นทางการ */
+  letter-spacing: .05em;     /* ระยะห่างตัวอักษร ช่วยให้อ่านง่ายขึ้นเมื่อเป็น uppercase */
+  white-space: nowrap        /* ป้องกัน header ขึ้นบรรทัดใหม่ */
+}
+.gt tr:last-child td { border-bottom: none }  /* ลบ border บรรทัดสุดท้าย */
+.gt tr:hover td { background: #fafafa }       /* highlight row เมื่อ hover */
+
+/* ROW HIGHLIGHTING สำหรับสินค้าหมดอายุ/ใกล้หมดอายุ */
+.row-exp td { background: #fef2f2 !important } /* แดงอ่อน = หมดอายุแล้ว */
+.row-exp:hover td { background: #fee2e2 !important }
+.row-warn td { background: #fffbeb !important } /* เหลืองอ่อน = ใกล้หมดอายุ */
+.row-warn:hover td { background: #fef3c7 !important }
+.ac { white-space: nowrap } /* Actions column ไม่ขึ้นบรรทัดใหม่ ป้องกันปุ่มแตก */
+.ec { text-align: center; color: var(--muted); padding: 48px !important; font-size: 14px }
+/* Empty cell: แสดงเมื่อตารางว่าง */
+
+/* BADGES — ป้ายสถานะขนาดเล็ก */
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap }
+.bd { background: var(--dl); color: var(--d) }    /* Danger: Expired */
+.bw { background: var(--wl); color: #92400e }     /* Warning: Expiring Soon */
+.bs { background: var(--sl); color: #065f46 }     /* Success: OK */
+.bg { background: #f3f4f6; color: var(--muted) }  /* Gray: No Expiry */
+.type-b { background: var(--pl); color: var(--pd); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap }
+/* type badge: แสดงประเภทสินค้า สีม่วงอ่อน */
+
+/* BUTTONS — ระบบปุ่มของ app */
+.btn-p { background: var(--p); color: #fff; padding: 8px 18px; border-radius: var(--r); font-weight: 500; transition: background .15s }
+.btn-p:hover { background: var(--pd) } /* hover: เข้มขึ้น */
+/* Primary button: ปุ่มหลัก เช่น Save, Add */
+
+.btn-sec { background: #fff; color: var(--text); border: 1.5px solid var(--border); padding: 8px 18px; border-radius: var(--r); font-weight: 500; transition: all .15s }
+.btn-sec:hover { border-color: var(--p); color: var(--p) }
+/* Secondary button: ปุ่มรอง เช่น Edit */
+
+.btn-g { background: transparent; color: var(--muted); padding: 8px 14px; border-radius: var(--r); font-weight: 500; transition: all .15s }
+.btn-g:hover { background: var(--bg); color: var(--text) }
+/* Ghost button: ปุ่มโปร่งใส เช่น Cancel, Back */
+
+.btn-d { background: var(--d); color: #fff; padding: 8px 18px; border-radius: var(--r); font-weight: 500 }
+.btn-d:hover { background: #dc2626 }
+/* Danger button: ปุ่มอันตราย เช่น Delete, Remove */
+
+.btn-s { background: var(--s); color: #fff; padding: 8px 18px; border-radius: var(--r); font-weight: 500 }
+.btn-s:hover { background: #059669 }
+/* Success button: ปุ่มบวก เช่น Restore */
+
+.sm { padding: 4px 10px !important; font-size: 12px !important; border-radius: 6px !important }
+/* Small modifier: ลด padding/font-size สำหรับปุ่มในตาราง */
+
+.full { width: 100%; padding: 12px; font-size: 15px; font-weight: 600 }
+/* Full-width: ปุ่ม Login/Sign Up เต็มความกว้าง card */
+
+.icon-btn { background: transparent; color: var(--muted); padding: 4px 6px; border-radius: 4px; font-size: 14px; transition: all .15s }
+.icon-btn:hover { background: var(--bg); color: var(--text) }
+/* Icon button: ปุ่มไอคอน (✏️ 🗑️) ขนาดเล็ก โปร่งใส */
+
+/* FORMS — รูปแบบ input fields */
+.fg { display: flex; flex-direction: column; gap: 4px }
+/* Form Group: container ของ label + input วางในแนวตั้ง */
+.fg label { font-size: 13px; font-weight: 500 }
+.hint { font-size: 11px; font-weight: 400; color: var(--muted) } /* คำอธิบายเล็กใต้ label */
+.fg input, .fg select, .fg textarea {
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 9px 12px; color: var(--text); background: #fff;
+  transition: border-color .15s  /* animation เมื่อ focus */
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus {
+  border-color: var(--p);                          /* border เปลี่ยนเป็นสีม่วงเมื่อ focus */
+  box-shadow: 0 0 0 3px rgba(99,102,241,.08)       /* glow effect รอบ input เมื่อ focus */
+}
+.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px }
+/* 2-column grid layout สำหรับ form ใน modal (จัด field เป็น 2 คอลัมน์) */
+.sect { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border) }
+/* Section divider ใน form (เช่น "WARRANTY" header) */
+.warr-row { display: grid; grid-template-columns: 1fr 130px; gap: 12px }
+/* Warranty row: input ตัวเลข (ขยายได้) + select unit (130px คงที่) */
+.filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 16px }
+/* Search filter grid: auto-fill column เหมือน lists-grid */
+
+/* PRICE ROW — input ราคา + select สกุลเงิน */
+.price-row { display: flex; gap: 6px }
+.price-row select { width: 110px; border: 1.5px solid var(--border); border-radius: var(--r); padding: 9px 8px; color: var(--text); background: #fff; font-family: inherit; font-size: 14px; cursor: pointer; transition: border-color .15s }
+.price-row select:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(99,102,241,.08); outline: none }
+.price-row input { flex: 1; border: 1.5px solid var(--border); border-radius: var(--r); padding: 9px 12px; color: var(--text); background: #fff; transition: border-color .15s }
+.price-row input:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(99,102,241,.08); outline: none }
+
+/* AUTOCOMPLETE DROPDOWN — dropdown แนะนำชื่อสินค้า/ร้านค้า */
+.sugg-wrap { position: relative }
+/* relative positioning เป็น anchor สำหรับ .sugg-dd ที่ absolute */
+.sugg-dd {
+  position: absolute;              /* ลอยทับ content ด้านล่าง input */
+  top: calc(100% + 2px);          /* เริ่มต้นต่ำกว่า .sugg-wrap 2px */
+  left: 0; right: 0;              /* กว้างเท่า input */
+  background: #fff;
+  border: 1.5px solid var(--p);   /* border สีม่วงเมื่อเปิด */
+  border-top: none;                /* ไม่มี border บน (ติดกับ input) */
+  border-radius: 0 0 var(--r) var(--r);
+  box-shadow: var(--shm);
+  z-index: 300;                    /* อยู่บน modal (z-index 1000 ยกเว้น modal) */
+  max-height: 210px;
+  overflow-y: auto;                /* scroll เมื่อ suggestion เยอะ */
+  display: none                    /* ซ่อนเริ่มต้น แสดงด้วย JS */
+}
+.sugg-item { padding: 9px 13px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border) }
+.sugg-item:last-child { border-bottom: none }
+.sugg-item:hover, .sugg-item.highlighted { background: var(--pl); color: var(--pd) }
+/* highlighted: ใช้เมื่อ keyboard navigation (↑↓) ไปถึง item นั้น */
+.sugg-item mark { background: transparent; color: var(--pd); font-weight: 700 }
+/* mark: ส่วนที่ตรงกับคำค้น highlight ด้วย bold สีม่วง */
+
+/* MODAL — popup form สำหรับเพิ่ม/แก้ไขข้อมูล */
+.mo {
+  position: fixed;            /* ครอบทั้งหน้าจอ ไม่ขึ้นกับ scroll position */
+  inset: 0;                   /* top:0, right:0, bottom:0, left:0 ย่อ */
+  background: rgba(0,0,0,.5); /* overlay ดำโปร่งใส 50% darkens background */
+  z-index: 1000;              /* อยู่บนทุก element (sidebar z-index:100) */
+  display: none;              /* ซ่อนเริ่มต้น */
+  align-items: center; justify-content: center; /* จัด card ตรงกลาง */
+  padding: 20px               /* ป้องกัน modal ชิดขอบหน้าจอบนมือถือ */
+}
+.mc {
+  background: #fff; border-radius: 16px;
+  width: 100%; max-width: 660px;    /* จำกัดความกว้าง modal */
+  max-height: 90vh;                 /* จำกัดความสูง ป้องกัน modal ล้นหน้าจอ */
+  display: flex; flex-direction: column; /* header + body + footer stack แนวตั้ง */
+  box-shadow: 0 20px 60px rgba(0,0,0,.25)
+}
+.mc.sm { max-width: 440px } /* modal ขนาดเล็ก (สำหรับ List modal, Move modal) */
+.mh { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border) }
+.xbtn { background: transparent; color: var(--muted); font-size: 20px; padding: 4px 8px; border-radius: 6px; line-height: 1 }
+.xbtn:hover { background: var(--bg); color: var(--text) }
+.mb { padding: 22px 24px; overflow-y: auto; flex: 1 }
+/* modal body: overflow-y:auto ทำให้ scroll ได้เมื่อ content ยาว, flex:1 ขยายเต็มพื้นที่ */
+.mf { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid var(--border) }
+/* modal footer: ปุ่มชิดขวา */
+.info-box { background: #f8f9ff; border: 1.5px solid #c7d2fe; border-radius: var(--r); padding: 12px 14px; font-size: 12px; color: #3730a3; line-height: 1.7; margin-top: 14px }
+/* กล่องข้อมูลสีม่วงอ่อน ใช้อธิบาย Move vs Duplicate */
+
+/* EMPTY STATE — แสดงเมื่อยังไม่มีข้อมูล */
+.empty { text-align: center; padding: 60px 20px }
+.empty-ic { font-size: 48px; margin-bottom: 16px } /* icon ขนาดใหญ่ */
+.empty p { color: var(--muted); font-size: 15px }
+
+/* TOAST NOTIFICATIONS — popup แจ้งผลลัพธ์มุมขวาล่าง */
+#toasts { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 8px }
+.toast {
+  background: #1f2937; color: #fff;
+  padding: 12px 20px; border-radius: var(--r);
+  font-size: 13px; font-weight: 500;
+  box-shadow: var(--shm);
+  transform: translateY(16px); opacity: 0; /* เริ่มต้นซ่อน และอยู่ต่ำลง 16px */
+  transition: all .3s;  /* animation slide up + fade in */
+  pointer-events: none  /* ไม่ block การคลิกเนื้อหาด้านหลัง */
+}
+.toast.show { transform: translateY(0); opacity: 1 } /* JS เพิ่ม class นี้เพื่อแสดง */
+.toast.ok  { background: #065f46 } /* สีเขียวเข้ม = สำเร็จ */
+.toast.err { background: #991b1b } /* สีแดงเข้ม = error */
+
+/* UTILITY CLASSES */
+.mt2 { margin-top: 8px }
+.mt3 { margin-top: 12px }
+.mt4 { margin-top: 16px }
+.muted { color: var(--muted); font-size: 13px }
 </style>
 </head>
 <body>
 
-<!-- AUTH -->
+<!-- ════════════════════════════════════════════════════════════════
+     AUTH SCREEN — หน้า Login / Sign Up
+     แสดงก่อน login, ซ่อนหลัง login สำเร็จ (ด้วย JS)
+     ════════════════════════════════════════════════════════════════ -->
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">🏠</div>
     <div class="auth-title">HomeTrack</div>
     <div class="auth-sub">Track all your home goods in one place</div>
+
+    <!-- TAB SWITCHER: Login / Sign Up -->
     <div class="auth-tabs">
+      <!-- onclick เรียก switchTab() เพื่อสลับ mode -->
       <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Login</button>
       <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
     </div>
-    <div class="fg" style="margin-bottom:12px"><label>Email</label><input id="ae" type="email" placeholder="you@example.com"></div>
-    <div class="fg" style="margin-bottom:8px"><label>Password</label><input id="ap" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')submitAuth()"></div>
+
+    <!-- Email input -->
+    <div class="fg" style="margin-bottom:12px">
+      <label>Email</label>
+      <input id="ae" type="email" placeholder="you@example.com">
+      <!-- id="ae" = auth email, type="email" ให้ browser validate รูปแบบ email -->
+    </div>
+
+    <!-- Password input -->
+    <div class="fg" style="margin-bottom:8px">
+      <label>Password</label>
+      <!-- onkeydown กด Enter = submit form แทนการคลิกปุ่ม (UX ที่ดีกว่า) -->
+      <input id="ap" type="password" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+
+    <!-- ข้อความ error/success -->
     <p id="auth-msg" style="font-size:13px;min-height:18px;margin-bottom:12px"></p>
+    <!-- min-height:18px ป้องกัน layout shift เมื่อข้อความปรากฏ/หายไป -->
+
+    <!-- ปุ่ม submit -->
     <button class="btn-p full" id="auth-btn" onclick="submitAuth()">Login</button>
+    <!-- JS จะเปลี่ยน text เป็น "Sign Up" เมื่อสลับ tab -->
   </div>
 </div>
 
-<!-- APP -->
+<!-- ════════════════════════════════════════════════════════════════
+     APP SCREEN — หน้าหลักหลัง login
+     ซ่อนเริ่มต้น (display:none) แสดงเมื่อ login สำเร็จ
+     ════════════════════════════════════════════════════════════════ -->
 <div id="app-screen" style="display:none">
+
+  <!-- SIDEBAR NAVIGATION -->
   <aside class="sidebar">
     <div class="sb-brand">
       <div class="sb-logo">🏠 HomeTrack</div>
       <div class="sb-sub">Home Goods Tracker</div>
     </div>
     <nav class="sb-nav">
-      <a id="nav-dash" class="nav-item active" onclick="goto('dashboard')"><span class="nav-ic">📋</span> My Lists</a>
-      <a id="nav-srch" class="nav-item" onclick="goto('search')"><span class="nav-ic">🔍</span> Search</a>
-      <a id="nav-rb" class="nav-item" onclick="goto('recycle')"><span class="nav-ic">🗑️</span> Recycle Bin</a>
+      <!-- แต่ละ nav-item: onclick เรียก goto() เพื่อเปลี่ยนหน้า -->
+      <!-- id="nav-dash/srch/rb" ใช้ JS เพิ่ม/ลบ class "active" -->
+      <a id="nav-dash" class="nav-item active" onclick="goto('dashboard')">
+        <span class="nav-ic">📋</span> My Lists
+      </a>
+      <a id="nav-srch" class="nav-item" onclick="goto('search')">
+        <span class="nav-ic">🔍</span> Search
+      </a>
+      <a id="nav-rb" class="nav-item" onclick="goto('recycle')">
+        <span class="nav-ic">🗑️</span> Recycle Bin
+      </a>
     </nav>
     <div class="sb-foot">
       <div class="user-mail" id="user-mail"></div>
-      <button class="btn-g sm" style="color:rgba(255,255,255,.55);width:100%" onclick="signOut()">Sign Out</button>
+      <!-- JS ใส่ email ผู้ใช้ใน element นี้หลัง login -->
+      <button class="btn-g sm" style="color:rgba(255,255,255,.55);width:100%" onclick="signOut()">
+        Sign Out
+      </button>
     </div>
   </aside>
 
+  <!-- MAIN CONTENT AREA -->
   <main class="main">
+    <!-- NOTIFICATION BAR: ซ่อนเริ่มต้น JS แสดงเมื่อมีสินค้าใกล้หมดอายุ -->
     <div id="notif-bar"></div>
 
-    <!-- DASHBOARD -->
+    <!-- PAGE: DASHBOARD — แสดง List Cards ทั้งหมด -->
     <div id="pg-dashboard" class="pw">
-      <div class="ph"><h1>My Lists</h1><button class="btn-p" onclick="openListModal()">+ New List</button></div>
+      <div class="ph">
+        <h1>My Lists</h1>
+        <button class="btn-p" onclick="openListModal()">+ New List</button>
+        <!-- onclick ไม่ส่ง argument = เปิด modal สร้าง list ใหม่ -->
+      </div>
       <div id="lists-grid" class="lists-grid"></div>
+      <!-- JS ใส่ HTML ของ list cards ที่นี่ผ่าน renderDash() -->
     </div>
 
-    <!-- LIST DETAIL -->
+    <!-- PAGE: LIST DETAIL — แสดงสินค้าใน List ที่เลือก -->
     <div id="pg-list" class="pw" style="display:none">
       <div class="ph">
         <div class="breadcrumb">
+          <!-- ปุ่ม Back กลับ dashboard -->
           <button class="btn-g" style="padding:6px 10px" onclick="goto('dashboard')">← Back</button>
-          <span class="bc-sep">/</span><h2 id="list-title"></h2>
+          <span class="bc-sep">/</span>
+          <h2 id="list-title"></h2>
+          <!-- JS ใส่ชื่อ list ที่เลือกใน element นี้ -->
         </div>
         <div class="ha">
+          <!-- S.lid = ID ของ list ที่กำลังดูอยู่ ส่งให้ openListModal เพื่อแก้ไข -->
           <button class="btn-sec" onclick="openListModal(S.lid)">✏️ Edit List</button>
+          <!-- null = เปิด modal เพิ่มสินค้าใหม่ ไม่ใช่แก้ไข -->
           <button class="btn-p" onclick="openGoodModal(null)">+ Add Item</button>
         </div>
       </div>
+      <!-- ตารางสินค้า -->
       <div class="tw">
         <table class="gt">
-          <thead><tr>
-            <th>Name</th><th>Type</th><th>Price</th><th>Bought From</th>
-            <th>Date Bought</th><th>Expiry</th><th>Warranty Expiry</th>
-            <th>Location</th><th>Status</th><th>Actions</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>Name</th><th>Type</th><th>Price</th><th>Bought From</th>
+              <th>Date Bought</th><th>Expiry</th><th>Warranty Expiry</th>
+              <th>Location</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
           <tbody id="goods-tbody"></tbody>
+          <!-- JS ใส่ <tr> ของสินค้าแต่ละรายการที่นี่ผ่าน renderList() -->
         </table>
       </div>
     </div>
 
-    <!-- SEARCH -->
+    <!-- PAGE: SEARCH — ค้นหาสินค้าพร้อม filter -->
     <div id="pg-search" class="pw" style="display:none">
       <div class="ph"><h1>Search Items</h1></div>
       <div class="card" style="margin-bottom:20px">
         <div class="filter-grid">
-          <!-- Keyword with autocomplete -->
+
+          <!-- Keyword input พร้อม Autocomplete dropdown -->
           <div class="fg sugg-wrap">
+            <!-- sugg-wrap = position:relative เพื่อ anchor dropdown -->
             <label>Keyword</label>
+            <!-- oninput: ทุกครั้งที่พิมพ์ เรียก showKwSugg แสดง suggestion -->
+            <!-- onblur: เมื่อ input เสีย focus ซ่อน dropdown หลัง 180ms
+                   ใช้ setTimeout เพื่อให้ mousedown บน suggestion ทำงานได้ก่อน blur -->
+            <!-- handleKwKey: จัดการ ↑↓Enter สำหรับ keyboard navigation -->
             <input id="f-kw" type="text" placeholder="Name, location, notes…"
               oninput="showKwSugg(this.value)"
               onblur="setTimeout(()=>hideKwSugg(),180)"
               onkeydown="handleKwKey(event)">
+              <!-- handleKwKey: จัดการ ↑↓Enter สำหรับ keyboard navigation -->
             <div id="kw-sugg" class="sugg-dd"></div>
+            <!-- dropdown suggestion ซ่อนเริ่มต้น JS ใส่ content และแสดง/ซ่อน -->
           </div>
-          <div class="fg"><label>Type</label>
+
+          <!-- Type filter -->
+          <div class="fg">
+            <label>Type</label>
             <select id="f-type">
               <option value="">All Types</option>
               <option>Food</option><option>Consumer Good</option><option>Electronic Device</option>
@@ -254,43 +605,72 @@ table{border-collapse:collapse;width:100%}
               <option>Sports Equipment</option><option>Others</option>
             </select>
           </div>
-          <!-- Bought From with autocomplete -->
+
+          <!-- Bought From พร้อม autocomplete จาก stores table -->
           <div class="fg sugg-wrap">
             <label>Bought From</label>
+            <!-- ส่ง id ของ dropdown ('f-bf-sugg') เพื่อ showBfSugg รู้ว่าต้องอัปเดต dropdown ไหน
+                   (ใช้ function เดียวกับ g-bf ใน modal แต่ dropdown ต่างกัน) -->
             <input id="f-bf" type="text" placeholder="Store name…"
               oninput="showBfSugg(this.value,'f-bf-sugg')"
               onblur="setTimeout(()=>hideSugg('f-bf-sugg'),180)"
               onkeydown="if(event.key==='Enter')doSearch()">
             <div id="f-bf-sugg" class="sugg-dd"></div>
           </div>
-          <div class="fg"><label>List</label><select id="f-list"><option value="">All Lists</option></select></div>
+
+          <!-- List filter -->
+          <div class="fg">
+            <label>List</label>
+            <select id="f-list"><option value="">All Lists</option></select>
+            <!-- JS populate ตัวเลือก list จาก S.lists ใน initSearch() -->
+          </div>
+
+          <!-- Date range filters -->
           <div class="fg"><label>Date Bought (From)</label><input id="f-df" type="date"></div>
           <div class="fg"><label>Date Bought (To)</label><input id="f-dt" type="date"></div>
           <div class="fg"><label>Expiry (From)</label><input id="f-ef" type="date"></div>
           <div class="fg"><label>Expiry (To)</label><input id="f-et" type="date"></div>
         </div>
+
         <div style="display:flex;gap:10px">
           <button class="btn-p" onclick="doSearch()">🔍 Search</button>
           <button class="btn-g" onclick="clearSearch()">Clear</button>
         </div>
       </div>
       <div id="search-results"></div>
+      <!-- JS render ตารางผลลัพธ์ที่นี่ผ่าน renderSearchResults() -->
     </div>
 
-    <!-- RECYCLE BIN -->
+    <!-- PAGE: RECYCLE BIN — สินค้าที่ถูก soft delete -->
     <div id="pg-recycle" class="pw" style="display:none">
-      <div class="ph"><div><h1>Recycle Bin</h1><p class="muted mt2">Items are permanently deleted 30 days after removal.</p></div></div>
+      <div class="ph">
+        <div>
+          <h1>Recycle Bin</h1>
+          <p class="muted mt2">Items are permanently deleted 30 days after removal.</p>
+        </div>
+      </div>
       <div id="recycle-list"></div>
+      <!-- JS render ตาราง recycle bin ที่นี่ผ่าน loadRecycle() -->
     </div>
   </main>
 </div>
 
-<!-- MODAL: ADD/EDIT GOOD -->
+<!-- ════════════════════════════════════════════════════════════════
+     MODAL: ADD / EDIT GOOD — เพิ่ม/แก้ไขสินค้า
+     ════════════════════════════════════════════════════════════════ -->
 <div id="modal-good" class="mo" onclick="overlayClose(event,'modal-good')">
+  <!-- onclick บน overlay: overlayClose ตรวจว่า click ตรง overlay (ไม่ใช่ modal card) ถึงจะปิด -->
   <div class="mc">
-    <div class="mh"><h2 id="mg-title">Add Item</h2><button class="xbtn" onclick="closeModal('modal-good')">✕</button></div>
+    <div class="mh">
+      <h2 id="mg-title">Add Item</h2>
+      <!-- JS เปลี่ยน text เป็น "Edit Item" เมื่อเปิดเพื่อแก้ไข -->
+      <button class="xbtn" onclick="closeModal('modal-good')">✕</button>
+    </div>
     <div class="mb">
+      <!-- 2-column grid สำหรับ field หลัก -->
       <div class="fg2">
+
+        <!-- Goods Type dropdown -->
         <div class="fg">
           <label>Goods Type *</label>
           <select id="g-type">
@@ -307,8 +687,14 @@ table{border-collapse:collapse;width:100%}
             <option value="Others">📦 Others</option>
           </select>
         </div>
-        <div class="fg"><label>Goods Name *</label><input id="g-name" type="text" placeholder="e.g., Milk, iPhone 15…"></div>
-        <!-- Bought From with store autocomplete -->
+
+        <!-- Goods Name (required field) -->
+        <div class="fg">
+          <label>Goods Name *</label>
+          <input id="g-name" type="text" placeholder="e.g., Milk, iPhone 15…">
+        </div>
+
+        <!-- Bought From + Store autocomplete dropdown -->
         <div class="fg sugg-wrap">
           <label>Bought From</label>
           <input id="g-bf" type="text" placeholder="Type or select a store…"
@@ -316,39 +702,71 @@ table{border-collapse:collapse;width:100%}
             onblur="setTimeout(()=>hideSugg('g-bf-sugg'),180)">
           <div id="g-bf-sugg" class="sugg-dd"></div>
         </div>
+
         <div class="fg"><label>Date Bought</label><input id="g-db" type="date"></div>
         <div class="fg"><label>Expiry Date</label><input id="g-exp" type="date"></div>
+
+        <!-- Price: currency select + amount input -->
         <div class="fg">
           <label>Price</label>
           <div class="price-row">
             <select id="g-curr">
+              <!-- ตัวเลือกสกุลเงิน THB เป็น default เพราะ user อยู่ในไทย -->
               <option value="THB">฿ THB</option><option value="USD">$ USD</option>
               <option value="EUR">€ EUR</option><option value="JPY">¥ JPY</option>
               <option value="GBP">£ GBP</option><option value="SGD">S$ SGD</option>
               <option value="CNY">¥ CNY</option><option value="AUD">A$ AUD</option>
               <option value="HKD">HK$ HKD</option>
             </select>
+            <!-- step="0.01" ให้กรอกทศนิยม 2 ตำแหน่งได้ (สตางค์) -->
             <input id="g-price" type="number" min="0" step="0.01" placeholder="0.00">
           </div>
         </div>
       </div>
-      <div class="fg" style="margin-bottom:14px"><label>Location Stored</label><input id="g-loc" type="text" placeholder="e.g., Kitchen shelf, Bedroom drawer"></div>
+
+      <!-- Location (full width นอก fg2 grid) -->
+      <div class="fg" style="margin-bottom:14px">
+        <label>Location Stored</label>
+        <input id="g-loc" type="text" placeholder="e.g., Kitchen shelf, Bedroom drawer">
+      </div>
+
+      <!-- WARRANTY SECTION -->
       <div class="sect">Warranty</div>
+
+      <!-- Duration + Unit: 2 field เรียงกัน -->
       <div class="warr-row" style="margin-bottom:12px">
-        <div class="fg"><label>Duration <span class="hint">(from today)</span></label><input id="g-wv" type="number" min="0" placeholder="e.g., 12" oninput="calcWarranty()"></div>
-        <div class="fg"><label>Unit</label>
+        <div class="fg">
+          <label>Duration <span class="hint">(from today)</span></label>
+          <!-- oninput: คำนวณวันหมดรับประกันทันทีเมื่อพิมพ์ตัวเลข -->
+          <input id="g-wv" type="number" min="0" placeholder="e.g., 12" oninput="calcWarranty()">
+        </div>
+        <div class="fg">
+          <label>Unit</label>
+          <!-- onchange: คำนวณใหม่เมื่อเปลี่ยนหน่วย (วัน/สัปดาห์/เดือน/ปี) -->
           <select id="g-wu" onchange="calcWarranty()">
-            <option value="days">Days</option><option value="weeks">Weeks</option>
-            <option value="months" selected>Months</option><option value="years">Years</option>
+            <option value="days">Days</option>
+            <option value="weeks">Weeks</option>
+            <option value="months" selected>Months</option>
+            <!-- "months" selected เป็น default เพราะรับประกันส่วนใหญ่นับเป็นเดือน -->
+            <option value="years">Years</option>
           </select>
         </div>
       </div>
+
+      <!-- Warranty Expiry Date: auto-filled แต่แก้ไขได้เอง -->
       <div class="fg" style="margin-bottom:14px">
         <label>Warranty Expiry Date <span class="hint">— auto-calculated · adjust if needed</span></label>
         <input id="g-wexp" type="date">
+        <!-- JS ใส่วันที่คำนวณได้ แต่ user แก้ไขได้ถ้าวันจริงต่างกัน -->
       </div>
-      <div class="fg"><label>Other Description</label><textarea id="g-desc" rows="3" placeholder="Serial number, model, notes, links…"></textarea></div>
+
+      <!-- Description/notes -->
+      <div class="fg">
+        <label>Other Description</label>
+        <textarea id="g-desc" rows="3" placeholder="Serial number, model, notes, links…"></textarea>
+      </div>
     </div>
+
     <div class="mf">
       <button class="btn-g" onclick="closeModal('modal-good')">Cancel</button>
       <button class="btn-p" onclick="saveGood()">Save Item</button>
@@ -356,32 +774,53 @@ table{border-collapse:collapse;width:100%}
   </div>
 </div>
 
-<!-- MODAL: LIST -->
+<!-- ════════════════════════════════════════════════════════════════
+     MODAL: LIST — สร้าง/แก้ไข List
+     ════════════════════════════════════════════════════════════════ -->
 <div id="modal-list" class="mo" onclick="overlayClose(event,'modal-list')">
-  <div class="mc sm">
-    <div class="mh"><h2 id="ml-title">New List</h2><button class="xbtn" onclick="closeModal('modal-list')">✕</button></div>
+  <div class="mc sm"> <!-- sm = modal ขนาดเล็ก (max-width:440px) -->
+    <div class="mh">
+      <h2 id="ml-title">New List</h2>
+      <!-- JS เปลี่ยนเป็น "Edit List" เมื่อแก้ไข -->
+      <button class="xbtn" onclick="closeModal('modal-list')">✕</button>
+    </div>
     <div class="mb">
-      <div class="fg" style="margin-bottom:12px"><label>List Name *</label><input id="l-name" type="text" placeholder="e.g., Kitchen, Electronics"></div>
-      <div class="fg"><label>Description</label><textarea id="l-desc" rows="2" placeholder="Optional"></textarea></div>
+      <div class="fg" style="margin-bottom:12px">
+        <label>List Name *</label>
+        <input id="l-name" type="text" placeholder="e.g., Kitchen, Electronics">
+      </div>
+      <div class="fg">
+        <label>Description</label>
+        <textarea id="l-desc" rows="2" placeholder="Optional"></textarea>
+      </div>
     </div>
     <div class="mf">
       <button class="btn-g" onclick="closeModal('modal-list')">Cancel</button>
+      <!-- submitList() ตรวจว่าเป็น create หรือ update จาก S.editLid -->
       <button class="btn-p" onclick="submitList()">Save List</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: MOVE / DUPLICATE -->
+<!-- ════════════════════════════════════════════════════════════════
+     MODAL: MOVE / DUPLICATE — ย้ายหรือทำสำเนาสินค้าไป List อื่น
+     ════════════════════════════════════════════════════════════════ -->
 <div id="modal-move" class="mo" onclick="overlayClose(event,'modal-move')">
   <div class="mc sm">
-    <div class="mh"><h2>Move or Duplicate Item</h2><button class="xbtn" onclick="closeModal('modal-move')">✕</button></div>
+    <div class="mh">
+      <h2>Move or Duplicate Item</h2>
+      <button class="xbtn" onclick="closeModal('modal-move')">✕</button>
+    </div>
     <div class="mb">
       <p style="font-size:12px;color:var(--muted);margin-bottom:3px">Selected item</p>
       <p id="mv-item-name" style="font-weight:700;font-size:15px;margin-bottom:18px;color:var(--text)"></p>
+      <!-- JS ใส่ชื่อสินค้าที่เลือกที่นี่ -->
       <div class="fg">
         <label>Target List</label>
         <select id="mv-list"></select>
+        <!-- JS populate list ปลายทาง (ไม่รวม list ปัจจุบัน) -->
       </div>
+      <!-- กล่องอธิบายความต่างระหว่าง Move กับ Duplicate -->
       <div class="info-box">
         <strong>Move →</strong> removes item from the current list and places it in the target list.<br>
         <strong>Duplicate 📋</strong> keeps the original and creates an identical copy in the target list.
@@ -395,225 +834,513 @@ table{border-collapse:collapse;width:100%}
   </div>
 </div>
 
+<!-- Container สำหรับ toast notifications (JS เพิ่ม/ลบ element ที่นี่) -->
 <div id="toasts"></div>
 
+<!-- ════════════════════════════════════════════════════════════════
+     JAVASCRIPT — Logic ทั้งหมดของ Application
+     วางไว้ท้าย body เพื่อให้ HTML โหลดก่อน JS ทำงาน
+     ════════════════════════════════════════════════════════════════ -->
 <script>
-// ┌──────────────────────────────────────────────────┐
-// │  ⚠️  REPLACE WITH YOUR SUPABASE CREDENTIALS     │
-// └──────────────────────────────────────────────────┘
+
+// ══════════════════════════════════════════════════════════════════
+// SUPABASE CONFIGURATION
+// ข้อมูลสำหรับเชื่อมต่อ Supabase Project
+// ══════════════════════════════════════════════════════════════════
+
+// URL ของ Supabase Project (เฉพาะของแต่ละโปรเจกต์)
 const SB_URL = 'https://jsvfuhrwsimlwuxhrlev.supabase.co';
+
+// Anon (Public) Key: ใช้สำหรับ authenticate การเชื่อมต่อฝั่ง client
+// ปลอดภัยเพราะ Row Level Security (RLS) จำกัดให้ user เข้าถึงได้แค่ข้อมูลตัวเอง
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdmZ1aHJ3c2ltbHd1eGhybGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDU1MzMsImV4cCI6MjA5MzgyMTUzM30.DlmpDQluCvz5jyHrWTBWClNSt0reZ4_1oZyAH-T3g7A';
+
+// สร้าง Supabase client instance จาก URL + Key
+// createClient มาจาก library ที่โหลดจาก CDN ด้านบน
 const sb = supabase.createClient(SB_URL, SB_KEY);
 
-// ── STATE ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// APPLICATION STATE — ตัวแปรกลางเก็บสถานะของ app ทั้งหมด
+// ใช้ object เดียว (S) แทนหลาย global variable เพื่อจัดการง่าย
+// ══════════════════════════════════════════════════════════════════
 const S = {
-  user:null, page:'dashboard',
-  lid:null, lname:'',
-  lists:[], goods:[],
-  expiring:[], stores:[], allItemNames:[],
-  editGid:null, editLid:null, moveGid:null,
-  fromSearch:false,
-  dismissed:new Set(), isSignup:false,
-  kwIdx:-1,   // keyboard nav index for kw suggestions
+  user: null,          // ข้อมูล user จาก Supabase Auth (null = ยังไม่ login)
+  page: 'dashboard',   // หน้าปัจจุบัน: 'dashboard'|'list-detail'|'search'|'recycle'
+  lid: null,           // ID ของ List ที่กำลังดูอยู่ (list_id ใน database)
+  lname: '',           // ชื่อ List ที่กำลังดูอยู่ (สำหรับแสดงใน breadcrumb)
+  lists: [],           // array ของ List ทั้งหมดของ user
+  goods: [],           // array ของสินค้าใน List ที่กำลังดูอยู่
+  expiring: [],        // array ของสินค้าที่หมดอายุ/ใกล้หมดอายุ (สำหรับ notification)
+  stores: [],          // array ของร้านค้าจากตาราง stores (สำหรับ autocomplete)
+  allItemNames: [],    // array ชื่อสินค้าทั้งหมด (สำหรับ keyword autocomplete ใน search)
+  editGid: null,       // ID ของ Good ที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+  editLid: null,       // ID ของ List ที่กำลังแก้ไข (null = กำลังสร้างใหม่)
+  moveGid: null,       // ID ของ Good ที่จะ move/duplicate
+  fromSearch: false,   // flag: เปิด modal จาก search page หรือไม่ (ส่งผลต่อ refresh หลัง save)
+  dismissed: new Set(), // Set ของ notification ID ที่ user กด "Dismiss" แล้ว
+  // ใช้ Set เพราะ lookup O(1) และไม่มี duplicate
+  isSignup: false,     // flag: อยู่ใน mode Sign Up หรือ Login
+  kwIdx: -1,           // index ของ suggestion ที่ highlight ด้วย keyboard (-1 = ไม่มี)
 };
 
-const CURR = {THB:'฿',USD:'$',EUR:'€',JPY:'¥',GBP:'£',SGD:'S$',CNY:'¥',AUD:'A$',HKD:'HK$'};
+// ══════════════════════════════════════════════════════════════════
+// CURRENCY SYMBOL MAP — map สกุลเงิน → สัญลักษณ์
+// ใช้แสดงราคาในรูปแบบ "฿1,200.00" แทน "THB 1,200.00"
+// ══════════════════════════════════════════════════════════════════
+const CURR = {
+  THB:'฿', USD:'$', EUR:'€', JPY:'¥', GBP:'£',
+  SGD:'S$', CNY:'¥', AUD:'A$', HKD:'HK$'
+};
 
-// ── HELPERS ───────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS — ฟังก์ชันช่วยงานทั่วไป
+// ══════════════════════════════════════════════════════════════════
+
+// $ — shorthand สำหรับ document.getElementById
+// เหตุผล: เรียกบ่อยมาก ตัวย่อช่วยลดความยาว code
 const $ = id => document.getElementById(id);
-const a = s  => s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : '';
-const h = s  => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
 
-function fmtDate(d){
-  if(!d) return '—';
-  return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-}
-function daysTo(d){
-  if(!d) return null;
-  const t=new Date();t.setHours(0,0,0,0);
-  const x=new Date(d+'T12:00:00');x.setHours(0,0,0,0);
-  return Math.ceil((x-t)/86400000);
-}
-function addDur(v,u){
-  const d=new Date(),n=parseInt(v);
-  if(u==='days') d.setDate(d.getDate()+n);
-  else if(u==='weeks') d.setDate(d.getDate()+n*7);
-  else if(u==='months') d.setMonth(d.getMonth()+n);
-  else if(u==='years') d.setFullYear(d.getFullYear()+n);
-  return d.toISOString().split('T')[0];
-}
-function status(exp){
-  if(!exp) return {lbl:'No Expiry',cls:'bg'};
-  const d=daysTo(exp);
-  if(d<0) return {lbl:'Expired',cls:'bd'};
-  if(d===0) return {lbl:'Expires Today!',cls:'bd'};
-  if(d<=7) return {lbl:`Expires in ${d}d`,cls:'bw'};
-  return {lbl:'OK',cls:'bs'};
-}
-function fmtPrice(p,c){
-  if(p===null||p===undefined||p==='') return '—';
-  const sym=CURR[c]||(c?c+' ':'');
-  return sym+Number(p).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function highlight(str,query){
-  if(!query) return h(str);
-  const idx=str.toLowerCase().indexOf(query.toLowerCase());
-  if(idx<0) return h(str);
-  return h(str.slice(0,idx))+'<mark>'+h(str.slice(idx,idx+query.length))+'</mark>'+h(str.slice(idx+query.length));
-}
-function toast(msg,type='ok'){
-  const t=document.createElement('div');
-  t.className=`toast ${type}`;t.textContent=msg;
-  $('toasts').appendChild(t);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
-  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3200);
-}
-function openModal(id){$(id).style.display='flex';}
-function closeModal(id){$(id).style.display='none';}
-function overlayClose(e,id){if(e.target===$(id))closeModal(id);}
+// a — HTML Attribute Encoding: escape อักขระพิเศษสำหรับใส่ใน attribute HTML
+// เหตุผล: ป้องกัน XSS เมื่อนำค่า user input ใส่ใน onclick="..." หรือ data-xxx="..."
+// escape " เพราะ attribute อยู่ใน double quotes
+const a = s => s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : '';
 
-// ── AUTH ──────────────────────────────────────────────
-function switchTab(tab){
-  S.isSignup=tab==='signup';
-  $('tab-login').classList.toggle('active',!S.isSignup);
-  $('tab-signup').classList.toggle('active',S.isSignup);
-  $('auth-btn').textContent=S.isSignup?'Sign Up':'Login';
-  $('auth-msg').textContent='';
-}
-async function submitAuth(){
-  const email=$('ae').value.trim(),pw=$('ap').value;
-  const msg=$('auth-msg');msg.textContent='';msg.style.color='#ef4444';
-  if(!email||!pw){msg.textContent='Enter email and password.';return;}
-  try{
-    if(S.isSignup){
-      const{error}=await sb.auth.signUp({email,password:pw});
-      if(error)throw error;
-      msg.style.color='#10b981';msg.textContent='✅ Check your email to confirm your account!';
-    }else{
-      const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
-      if(error)throw error;
-      S.user=data.user;await initApp();
-    }
-  }catch(e){msg.textContent=e.message;}
-}
-async function signOut(){
-  await sb.auth.signOut();S.user=null;
-  $('app-screen').style.display='none';$('auth-screen').style.display='flex';
-  $('ae').value='';$('ap').value='';$('auth-msg').textContent='';
-}
+// h — HTML Text Encoding: escape อักขระพิเศษสำหรับแสดงเป็น text ใน HTML
+// เหตุผล: ป้องกัน XSS เมื่อนำค่า user input แสดงใน innerHTML
+// escape <, > เพื่อป้องกัน inject HTML tag
+const h = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
 
-// ── INIT ──────────────────────────────────────────────
-async function initApp(){
-  $('auth-screen').style.display='none';$('app-screen').style.display='flex';
-  $('user-mail').textContent=S.user.email;
-  await Promise.all([purgeOldDeleted(),loadLists(),loadStores()]);
-  await checkExpiring();
-  goto('dashboard');
-}
-
-// ── NAVIGATION ────────────────────────────────────────
-function goto(page,lid=null,lname=''){
-  S.page=page;
-  if(lid){S.lid=lid;S.lname=lname;}
-  ['pg-dashboard','pg-list','pg-search','pg-recycle'].forEach(p=>$(p).style.display='none');
-  ['nav-dash','nav-srch','nav-rb'].forEach(n=>$(n).classList.remove('active'));
-  if(page==='dashboard'){$('pg-dashboard').style.display='block';$('nav-dash').classList.add('active');renderDash();}
-  else if(page==='list-detail'){$('pg-list').style.display='block';renderList();}
-  else if(page==='search'){$('pg-search').style.display='block';$('nav-srch').classList.add('active');initSearch();}
-  else if(page==='recycle'){$('pg-recycle').style.display='block';$('nav-rb').classList.add('active');loadRecycle();}
-}
-
-// ── LISTS ─────────────────────────────────────────────
-async function loadLists(){
-  const{data:lists}=await sb.from('lists').select('id,name,description,created_at').eq('user_id',S.user.id).order('created_at',{ascending:false});
-  const{data:cnts}=await sb.from('goods').select('list_id').eq('user_id',S.user.id).is('deleted_at',null);
-  const cm={};(cnts||[]).forEach(g=>{cm[g.list_id]=(cm[g.list_id]||0)+1;});
-  // expiry grouping per list
-  const wk=new Date();wk.setDate(wk.getDate()+7);
-  const{data:expI}=await sb.from('goods').select('list_id,expiry_date').eq('user_id',S.user.id).is('deleted_at',null).not('expiry_date','is',null).lte('expiry_date',wk.toISOString().split('T')[0]);
-  const em={};
-  (expI||[]).forEach(g=>{
-    if(!em[g.list_id])em[g.list_id]={exp:0,soon:0};
-    daysTo(g.expiry_date)<0?em[g.list_id].exp++:em[g.list_id].soon++;
+// fmtDate — แปลง date string (YYYY-MM-DD) เป็นรูปแบบที่อ่านง่าย "01 Jan 2026"
+function fmtDate(d) {
+  if (!d) return '—'; // ถ้าไม่มีวันที่ return dash
+  // บวก 'T12:00:00' เพื่อป้องกัน timezone offset ทำให้วันที่เลื่อนไปวันก่อน/หลัง
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric'
+    // en-GB format: DD Mon YYYY เช่น "15 May 2026"
   });
-  S.lists=(lists||[]).map(l=>({...l,cnt:cm[l.id]||0,em:em[l.id]||{exp:0,soon:0}}));
 }
-function renderDash(){
-  const g=$('lists-grid');
-  if(!S.lists.length){g.innerHTML=`<div class="empty"><div class="empty-ic">📦</div><p>No lists yet. Create your first list!</p></div>`;return;}
-  g.innerHTML=S.lists.map(l=>{
-    const e=l.em;
-    const cls=`list-card${e.exp>0?' lc-exp':e.soon>0?' lc-warn':''}`;
-    let alerts='';
-    if(e.exp>0)alerts+=`<span class="lc-alert exp">🔴 ${e.exp} expired</span>`;
-    if(e.soon>0)alerts+=`<span class="lc-alert soon">⚠️ ${e.soon} expiring soon</span>`;
+
+// daysTo — คำนวณจำนวนวันจากวันนี้ถึงวันที่ด (ค่าลบ = ผ่านแล้ว)
+function daysTo(d) {
+  if (!d) return null; // ไม่มีวันที่ return null (สินค้าไม่มีวันหมดอายุ)
+  const t = new Date(); // วันนี้
+  t.setHours(0, 0, 0, 0); // reset เวลาเป็น 00:00:00 เพื่อเปรียบเทียบแค่วัน
+  const x = new Date(d + 'T12:00:00');
+  x.setHours(0, 0, 0, 0); // reset เวลาของ target date เช่นกัน
+  return Math.ceil((x - t) / 86400000); // หารด้วย ms ต่อวัน (86400000) ได้จำนวนวัน
+  // Math.ceil ปัดขึ้น: วันนี้ = 0, พรุ่งนี้ = 1, เมื่อวาน = -1
+}
+
+// addDur — คำนวณวันที่ในอนาคตจากวันนี้ โดยบวก duration ตาม unit
+// ใช้สำหรับคำนวณวันหมดรับประกันอัตโนมัติ
+function addDur(v, u) {
+  const d = new Date(); // เริ่มต้นจากวันนี้
+  const n = parseInt(v); // แปลง string เป็น integer
+  if (u === 'days')   d.setDate(d.getDate() + n);      // บวกวัน
+  else if (u === 'weeks')  d.setDate(d.getDate() + n * 7); // 1 week = 7 วัน
+  else if (u === 'months') d.setMonth(d.getMonth() + n);   // บวกเดือน (จัดการ end-of-month อัตโนมัติ)
+  else if (u === 'years')  d.setFullYear(d.getFullYear() + n); // บวกปี
+  return d.toISOString().split('T')[0]; // return เฉพาะ "YYYY-MM-DD"
+}
+
+// status — คำนวณสถานะสินค้าจากวันหมดอายุ
+// return object {lbl: ข้อความแสดง, cls: CSS class สำหรับ badge}
+function status(exp) {
+  if (!exp) return { lbl: 'No Expiry', cls: 'bg' }; // ไม่มีวันหมดอายุ = gray
+  const d = daysTo(exp);
+  if (d < 0)  return { lbl: 'Expired', cls: 'bd' };         // หมดอายุแล้ว = red danger
+  if (d === 0) return { lbl: 'Expires Today!', cls: 'bd' }; // หมดอายุวันนี้ = red danger
+  if (d <= 7)  return { lbl: `Expires in ${d}d`, cls: 'bw' }; // ≤7 วัน = orange warning
+  return { lbl: 'OK', cls: 'bs' }; // มากกว่า 7 วัน = green success
+}
+
+// fmtPrice — แปลงราคาเป็น string พร้อมสัญลักษณ์สกุลเงิน
+function fmtPrice(p, c) {
+  if (p === null || p === undefined || p === '') return '—'; // ไม่มีราคา = dash
+  const sym = CURR[c] || (c ? c + ' ' : ''); // หาสัญลักษณ์จาก map หรือใช้ code ตามด้วยเว้นวรรค
+  return sym + Number(p).toLocaleString('en', {
+    minimumFractionDigits: 2,  // แสดงทศนิยมอย่างน้อย 2 ตำแหน่ง
+    maximumFractionDigits: 2   // ไม่เกิน 2 ตำแหน่ง เช่น "฿1,200.00"
+  });
+}
+
+// highlight — ทำ Bold ส่วนที่ตรงกับคำค้นหาใน suggestion
+function highlight(str, query) {
+  if (!query) return h(str); // ไม่มี query = return ข้อความปกติ (escaped)
+  const idx = str.toLowerCase().indexOf(query.toLowerCase()); // หาตำแหน่งที่ match (case-insensitive)
+  if (idx < 0) return h(str); // ไม่พบ match = return ปกติ
+  // แบ่งข้อความเป็น 3 ส่วน: ก่อน match, match, หลัง match
+  // ส่วน match ห่อด้วย <mark> ซึ่ง CSS กำหนดเป็นสีม่วง bold
+  return h(str.slice(0, idx)) + '<mark>' + h(str.slice(idx, idx + query.length)) + '</mark>' + h(str.slice(idx + query.length));
+}
+
+// toast — แสดงข้อความแจ้งเตือนที่มุมขวาล่าง แล้วหายอัตโนมัติใน 3.2 วินาที
+function toast(msg, type = 'ok') {
+  const t = document.createElement('div'); // สร้าง element ใหม่ทุกครั้ง
+  t.className = `toast ${type}`;   // กำหนด style ตาม type (ok=เขียว, err=แดง)
+  t.textContent = msg;              // ใช้ textContent ป้องกัน XSS (ไม่ใช่ innerHTML)
+  $('toasts').appendChild(t);      // เพิ่มเข้า container
+  // requestAnimationFrame สองชั้น: รอให้ browser render element ก่อน จึงเพิ่ม class "show"
+  // เพื่อให้ CSS transition ทำงาน (ถ้าเพิ่ม class ทันทีหลัง append, transition ไม่ทำงาน)
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+  setTimeout(() => {
+    t.classList.remove('show'); // เริ่ม fade out animation
+    setTimeout(() => t.remove(), 300); // ลบ element หลัง animation เสร็จ (300ms)
+  }, 3200); // แสดงนาน 3.2 วินาที
+}
+
+// openModal/closeModal — เปิด/ปิด modal โดยสลับ display style
+function openModal(id)  { $(id).style.display = 'flex'; }  // 'flex' เพราะ modal ใช้ flexbox จัดกึ่งกลาง
+function closeModal(id) { $(id).style.display = 'none'; }  // ซ่อน modal
+
+// overlayClose — ปิด modal เมื่อ click บน overlay (พื้นที่นอก modal card)
+function overlayClose(e, id) {
+  // e.target = element ที่ถูก click จริง (อาจเป็น overlay หรือ element ภายใน modal)
+  // $(id) = element ของ overlay เอง
+  // เปรียบเทียบ: click ตรง overlay เท่านั้นถึงจะปิด ไม่ใช่ click ใน modal card
+  if (e.target === $(id)) closeModal(id);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// AUTH FUNCTIONS — จัดการ Login / Sign Up / Sign Out
+// ══════════════════════════════════════════════════════════════════
+
+// switchTab — สลับระหว่าง Login และ Sign Up tab
+function switchTab(tab) {
+  S.isSignup = tab === 'signup'; // อัปเดต state ว่าอยู่ใน mode ไหน
+  // toggle class 'active' บนปุ่มแต่ละ tab
+  $('tab-login').classList.toggle('active', !S.isSignup); // active เมื่อ !isSignup (คือ Login mode)
+  $('tab-signup').classList.toggle('active',  S.isSignup); // active เมื่อ isSignup
+  $('auth-btn').textContent = S.isSignup ? 'Sign Up' : 'Login'; // เปลี่ยนข้อความปุ่ม
+  $('auth-msg').textContent = ''; // ล้างข้อความ error เมื่อสลับ tab
+}
+
+// submitAuth — ส่งข้อมูล Login หรือ Sign Up ไปยัง Supabase Auth
+async function submitAuth() {
+  const email = $('ae').value.trim(); // ดึงค่า email (trim ลบ whitespace หัวท้าย)
+  const pw    = $('ap').value;        // ดึงค่า password (ไม่ trim: password อาจมีเว้นวรรค)
+  const msg   = $('auth-msg');        // reference ถึง element แสดงข้อความ
+  msg.textContent = '';               // ล้างข้อความเก่า
+  msg.style.color = '#ef4444';        // ตั้งสีแดงสำหรับ error message
+
+  // Validation เบื้องต้นก่อนส่งไป Supabase
+  if (!email || !pw) {
+    msg.textContent = 'Enter email and password.';
+    return; // หยุดทำงาน ไม่ส่ง request
+  }
+
+  try {
+    if (S.isSignup) {
+      // ── SIGN UP ──────────────────────────────────────────
+      const { error } = await sb.auth.signUp({ email, password: pw });
+      // sb.auth.signUp: สร้าง account ใหม่ใน Supabase Auth
+      if (error) throw error; // ถ้า error ให้ throw ไปจับที่ catch
+      msg.style.color = '#10b981'; // เปลี่ยนสีเป็นเขียว (success)
+      msg.textContent = '✅ Check your email to confirm your account!';
+      // Supabase ส่ง confirmation email ให้ user คลิก ก่อน login ได้
+    } else {
+      // ── LOGIN ─────────────────────────────────────────────
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+      // sb.auth.signInWithPassword: login ด้วย email + password
+      if (error) throw error;
+      S.user = data.user; // เก็บข้อมูล user ลง state
+      await initApp();    // เริ่มต้น app หลัง login สำเร็จ
+    }
+  } catch (e) {
+    msg.textContent = e.message; // แสดงข้อความ error จาก Supabase (เช่น "Invalid credentials")
+  }
+}
+
+// signOut — ออกจากระบบ ล้าง state และกลับหน้า login
+async function signOut() {
+  await sb.auth.signOut(); // เรียก Supabase ลบ session token
+  S.user = null; // ล้างข้อมูล user จาก state
+  // สลับ display: ซ่อน app, แสดง auth
+  $('app-screen').style.display  = 'none';
+  $('auth-screen').style.display = 'flex';
+  // ล้าง form เพื่อ security (ไม่ให้ password ค้างอยู่)
+  $('ae').value = '';
+  $('ap').value = '';
+  $('auth-msg').textContent = '';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// APP INITIALIZATION — เริ่มต้น app หลัง login สำเร็จ
+// ══════════════════════════════════════════════════════════════════
+
+async function initApp() {
+  // สลับหน้าจาก auth → app
+  $('auth-screen').style.display = 'none';
+  $('app-screen').style.display  = 'flex';
+  $('user-mail').textContent = S.user.email; // แสดง email ผู้ใช้ใน sidebar
+
+  // โหลดข้อมูลเริ่มต้น 3 อย่างพร้อมกัน (parallel) ด้วย Promise.all
+  // เหตุผลที่ parallel: ทั้งสามไม่ขึ้นแก่กัน โหลดพร้อมกันเร็วกว่าทำทีละอย่าง
+  await Promise.all([
+    purgeOldDeleted(), // ลบสินค้าใน recycle bin ที่เกิน 30 วัน
+    loadLists(),       // โหลด list ทั้งหมดของ user
+    loadStores()       // โหลดชื่อร้านค้าสำหรับ autocomplete
+  ]);
+
+  await checkExpiring(); // ตรวจสินค้าใกล้หมดอายุ แสดง notification bar
+  goto('dashboard');     // นำทางไปหน้า dashboard
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NAVIGATION — จัดการการเปลี่ยนหน้าใน app (Single Page Application)
+// ══════════════════════════════════════════════════════════════════
+
+// goto — เปลี่ยนหน้าโดย show/hide div และอัปเดต nav active state
+function goto(page, lid = null, lname = '') {
+  S.page = page; // อัปเดต state หน้าปัจจุบัน
+  // ถ้ามี lid ส่งมา (คลิก list card) อัปเดต current list
+  if (lid) { S.lid = lid; S.lname = lname; }
+
+  // ซ่อนทุก page ก่อน (จะ show เฉพาะหน้าที่ต้องการ)
+  ['pg-dashboard', 'pg-list', 'pg-search', 'pg-recycle']
+    .forEach(p => $(p).style.display = 'none');
+
+  // ลบ class 'active' จากทุก nav item
+  ['nav-dash', 'nav-srch', 'nav-rb']
+    .forEach(n => $(n).classList.remove('active'));
+
+  // แสดงหน้าที่ต้องการ + ทำ active nav + render content
+  if (page === 'dashboard') {
+    $('pg-dashboard').style.display = 'block';
+    $('nav-dash').classList.add('active');
+    renderDash(); // render list cards
+  }
+  else if (page === 'list-detail') {
+    $('pg-list').style.display = 'block';
+    // ไม่มี nav item สำหรับ list-detail (เป็น sub-page ของ dashboard)
+    renderList(); // render goods table
+  }
+  else if (page === 'search') {
+    $('pg-search').style.display = 'block';
+    $('nav-srch').classList.add('active');
+    initSearch(); // โหลด filter options + item names
+  }
+  else if (page === 'recycle') {
+    $('pg-recycle').style.display = 'block';
+    $('nav-rb').classList.add('active');
+    loadRecycle(); // โหลดและ render recycle bin
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// LISTS — จัดการ List (โหลด, แสดง, สร้าง, แก้ไข, ลบ)
+// ══════════════════════════════════════════════════════════════════
+
+// loadLists — โหลด list ทั้งหมดของ user พร้อมข้อมูล count และ expiry status
+async function loadLists() {
+  // Query 1: ดึง list ทั้งหมดของ user เรียงตาม created_at ใหม่ก่อน
+  const { data: lists } = await sb.from('lists')
+    .select('id,name,description,created_at')
+    .eq('user_id', S.user.id)  // กรองเฉพาะ list ของ user คนนี้ (RLS ก็ป้องกันแล้ว แต่ explicit ดีกว่า)
+    .order('created_at', { ascending: false }); // ใหม่ขึ้นก่อน
+
+  // Query 2: นับจำนวนสินค้า (ไม่ถูกลบ) ในแต่ละ list
+  const { data: cnts } = await sb.from('goods')
+    .select('list_id')         // ดึงแค่ list_id ไม่ต้องดึงทุก column (ประหยัด bandwidth)
+    .eq('user_id', S.user.id)
+    .is('deleted_at', null);   // เฉพาะสินค้าที่ไม่ถูก soft delete
+
+  // สร้าง count map: { list_id: count }
+  const cm = {};
+  (cnts || []).forEach(g => {
+    cm[g.list_id] = (cm[g.list_id] || 0) + 1; // บวกทีละ 1 ต่อ list
+  });
+
+  // Query 3: ดึงสินค้าใกล้หมดอายุ (≤7 วัน) แยกตาม list
+  const wk = new Date();
+  wk.setDate(wk.getDate() + 7); // 7 วันข้างหน้า
+  const { data: expI } = await sb.from('goods')
+    .select('list_id,expiry_date') // ดึงแค่ 2 column ที่ต้องการ
+    .eq('user_id', S.user.id)
+    .is('deleted_at', null)
+    .not('expiry_date', 'is', null) // มีวันหมดอายุ
+    .lte('expiry_date', wk.toISOString().split('T')[0]); // หมดอายุภายใน 7 วัน (รวมหมดแล้ว)
+
+  // สร้าง expiry map: { list_id: {exp: จำนวนหมดแล้ว, soon: จำนวนใกล้หมด} }
+  const em = {};
+  (expI || []).forEach(g => {
+    if (!em[g.list_id]) em[g.list_id] = { exp: 0, soon: 0 }; // สร้าง entry ถ้าไม่มี
+    daysTo(g.expiry_date) < 0
+      ? em[g.list_id].exp++    // ผ่านวันหมดอายุแล้ว (วันในอดีต)
+      : em[g.list_id].soon++;  // ยังไม่หมดแต่ใกล้แล้ว
+  });
+
+  // รวมข้อมูลทั้งหมดเข้า S.lists
+  S.lists = (lists || []).map(l => ({
+    ...l,                            // spread ข้อมูลจาก query 1
+    cnt: cm[l.id] || 0,             // จำนวนสินค้า (0 ถ้าไม่มี)
+    em: em[l.id] || { exp: 0, soon: 0 } // expiry summary (empty object ถ้าไม่มี)
+  }));
+}
+
+// renderDash — render list cards บนหน้า Dashboard
+function renderDash() {
+  const g = $('lists-grid'); // element container สำหรับ cards
+  if (!S.lists.length) {
+    // Empty state: ยังไม่มี list
+    g.innerHTML = `<div class="empty"><div class="empty-ic">📦</div><p>No lists yet. Create your first list!</p></div>`;
+    return;
+  }
+
+  // map แต่ละ list เป็น HTML card string แล้ว join เป็น string เดียว
+  g.innerHTML = S.lists.map(l => {
+    const e = l.em; // expiry summary ของ list นี้
+    // กำหนด CSS class: เพิ่ม lc-exp หรือ lc-warn ถ้ามีสินค้า expired/expiring
+    const cls = `list-card${e.exp > 0 ? ' lc-exp' : e.soon > 0 ? ' lc-warn' : ''}`;
+
+    // สร้าง HTML สำหรับ expiry alert badges
+    let alerts = '';
+    if (e.exp > 0)  alerts += `<span class="lc-alert exp">🔴 ${e.exp} expired</span>`;
+    if (e.soon > 0) alerts += `<span class="lc-alert soon">⚠️ ${e.soon} expiring soon</span>`;
+
     return `<div class="${cls}" data-id="${a(l.id)}" data-name="${a(l.name)}" onclick="handleCardClick(this)">
+      <!-- data-id, data-name: เก็บข้อมูลไว้ใน element แทนการ inline ใน onclick
+           เหตุผล: ป้องกัน XSS จากชื่อ list ที่มี quote หรืออักขระพิเศษ -->
       <div class="lc-head">
         <h3>${h(l.name)}</h3>
         <div class="lc-acts" onclick="event.stopPropagation()">
+          <!-- stopPropagation: ป้องกัน click ปุ่มใน card ทำให้เปิด list detail ด้วย -->
           <button class="icon-btn" onclick="openListModal('${a(l.id)}')">✏️</button>
           <button class="icon-btn" onclick="deleteList('${a(l.id)}')">🗑️</button>
         </div>
       </div>
-      ${l.description?`<p class="lc-desc">${h(l.description)}</p>`:''}
-      ${alerts?`<div class="lc-alert-row">${alerts}</div>`:''}
+      ${l.description ? `<p class="lc-desc">${h(l.description)}</p>` : ''}
+      ${alerts ? `<div class="lc-alert-row">${alerts}</div>` : ''}
       <div class="lc-foot">
-        <span class="item-count">${l.cnt} item${l.cnt!==1?'s':''}</span>
+        <span class="item-count">${l.cnt} item${l.cnt !== 1 ? 's' : ''}</span>
         <span class="lc-date">${fmtDate(l.created_at.split('T')[0])}</span>
       </div>
     </div>`;
-  }).join('');
-}
-function handleCardClick(el){goto('list-detail',el.dataset.id,el.dataset.name);}
-function openListModal(lid=null){
-  S.editLid=lid;$('ml-title').textContent=lid?'Edit List':'New List';
-  $('l-name').value='';$('l-desc').value='';
-  if(lid){const l=S.lists.find(x=>x.id===lid);if(l){$('l-name').value=l.name;$('l-desc').value=l.description||'';}}
-  openModal('modal-list');
-}
-async function submitList(){
-  const name=$('l-name').value.trim();
-  if(!name){toast('List name is required','err');return;}
-  const desc=$('l-desc').value.trim();
-  let error;
-  if(S.editLid){({error}=await sb.from('lists').update({name,description:desc||null,updated_at:new Date().toISOString()}).eq('id',S.editLid));}
-  else{({error}=await sb.from('lists').insert({user_id:S.user.id,name,description:desc||null}));}
-  if(error){toast(error.message,'err');return;}
-  closeModal('modal-list');await loadLists();
-  if(S.page==='dashboard')renderDash();
-  else{S.lname=name;$('list-title').textContent=name;}
-  toast(S.editLid?'List updated!':'List created!');
-}
-async function deleteList(lid){
-  if(!confirm('Delete this list and all items stored? This action cannot be undone.'))return;
-  await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('list_id',lid).is('deleted_at',null);
-  const{error}=await sb.from('lists').delete().eq('id',lid);
-  if(error){toast(error.message,'err');return;}
-  await loadLists();renderDash();toast('List deleted');
+  }).join(''); // รวม HTML string ของทุก card
 }
 
-// ── GOODS ─────────────────────────────────────────────
-async function loadGoods(lid){
-  const{data}=await sb.from('goods').select('*').eq('list_id',lid).is('deleted_at',null).order('created_at',{ascending:false});
-  S.goods=data||[];
+// handleCardClick — จัดการ click บน list card (ใช้ data attribute แทน inline onclick)
+function handleCardClick(el) {
+  // อ่านข้อมูลจาก data attributes ของ element ที่ถูก click
+  goto('list-detail', el.dataset.id, el.dataset.name);
 }
-async function renderList(){
-  $('list-title').textContent=S.lname;
-  await loadGoods(S.lid);
-  const tb=$('goods-tbody');
-  if(!S.goods.length){tb.innerHTML=`<tr><td colspan="10" class="ec">No items yet. Click "+ Add Item" to get started.</td></tr>`;return;}
-  tb.innerHTML=S.goods.map(g=>{
-    const st=status(g.expiry_date);
-    const rc=st.cls==='bd'?'row-exp':st.cls==='bw'?'row-warn':'';
+
+// openListModal — เปิด modal สร้าง (lid=null) หรือแก้ไข list (lid=ID)
+function openListModal(lid = null) {
+  S.editLid = lid; // เก็บ ID สำหรับ submitList() รู้ว่า create หรือ update
+  $('ml-title').textContent = lid ? 'Edit List' : 'New List'; // เปลี่ยน title modal
+  // reset ค่า form
+  $('l-name').value = '';
+  $('l-desc').value = '';
+  if (lid) {
+    // ถ้าแก้ไข: หาข้อมูล list จาก state แล้วใส่ค่าใน form
+    const l = S.lists.find(x => x.id === lid);
+    if (l) {
+      $('l-name').value = l.name;
+      $('l-desc').value = l.description || ''; // description อาจเป็น null
+    }
+  }
+  openModal('modal-list');
+}
+
+// submitList — บันทึก list (สร้างใหม่หรืออัปเดต ขึ้นอยู่กับ S.editLid)
+async function submitList() {
+  const name = $('l-name').value.trim(); // trim ลบ whitespace หัวท้าย
+  if (!name) { toast('List name is required', 'err'); return; } // validate: ชื่อ list ต้องมี
+
+  const desc = $('l-desc').value.trim();
+  let error;
+
+  if (S.editLid) {
+    // ── UPDATE ────────────────────────────────────────────
+    ({ error } = await sb.from('lists')
+      .update({
+        name,
+        description: desc || null, // ถ้า description ว่าง ให้เป็น null ไม่ใช่ string ว่าง
+        updated_at: new Date().toISOString() // อัปเดต timestamp
+      })
+      .eq('id', S.editLid)); // กรองเฉพาะ list ที่แก้ไข
+  } else {
+    // ── CREATE ────────────────────────────────────────────
+    ({ error } = await sb.from('lists')
+      .insert({
+        user_id: S.user.id, // ผูก list กับ user คนนี้
+        name,
+        description: desc || null
+      }));
+  }
+
+  if (error) { toast(error.message, 'err'); return; } // แสดง error ถ้า Supabase ตอบกลับ error
+  closeModal('modal-list');
+  await loadLists(); // reload list ใหม่จาก database เพื่อให้ข้อมูลตรงกัน
+
+  // อัปเดต UI ตามหน้าที่อยู่ตอนนี้
+  if (S.page === 'dashboard') renderDash(); // อยู่หน้า dashboard: re-render cards
+  else { S.lname = name; $('list-title').textContent = name; } // อยู่หน้า list detail: update ชื่อ
+
+  toast(S.editLid ? 'List updated!' : 'List created!'); // แสดงผลสำเร็จ
+}
+
+// deleteList — ลบ list (soft delete สินค้า, hard delete list)
+async function deleteList(lid) {
+  // ถามยืนยันก่อนลบ (การกระทำที่ไม่สามารถ undo list ได้ แต่ goods ยัง restore ได้จาก recycle bin)
+  if (!confirm('Delete this list and all items stored? This action cannot be undone.')) return;
+
+  // Step 1: Soft delete สินค้าทุกตัวใน list นี้ (ย้ายไป recycle bin)
+  await sb.from('goods')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('list_id', lid)    // เฉพาะสินค้าใน list นี้
+    .is('deleted_at', null); // เฉพาะสินค้าที่ยังไม่ถูกลบ (ป้องกัน override deleted_at)
+
+  // Step 2: Hard delete list (ลบถาวร เพราะ list เป็นโครงสร้างไม่ใช่ข้อมูลสำคัญ)
+  const { error } = await sb.from('lists').delete().eq('id', lid);
+  if (error) { toast(error.message, 'err'); return; }
+
+  await loadLists(); // reload list ใหม่
+  renderDash(); // re-render dashboard
+  toast('List deleted');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GOODS — จัดการสินค้า (โหลด, แสดง, เพิ่ม, แก้ไข, ลบ)
+// ══════════════════════════════════════════════════════════════════
+
+// loadGoods — โหลดสินค้าทั้งหมดใน list ที่เลือก (เฉพาะที่ไม่ถูกลบ)
+async function loadGoods(lid) {
+  const { data } = await sb.from('goods')
+    .select('*')               // ดึงทุก column เพราะแสดงข้อมูลทั้งหมดในตาราง
+    .eq('list_id', lid)        // เฉพาะสินค้าใน list นี้
+    .is('deleted_at', null)    // ไม่รวมสินค้าที่ถูก soft delete (ไปอยู่ใน recycle bin)
+    .order('created_at', { ascending: false }); // เรียงจากใหม่ไปเก่า
+  S.goods = data || []; // เก็บลง state (|| [] ป้องกัน null)
+}
+
+// renderList — render ตารางสินค้าบนหน้า List Detail
+async function renderList() {
+  $('list-title').textContent = S.lname; // แสดงชื่อ list บน breadcrumb
+  await loadGoods(S.lid); // โหลดสินค้าจาก database
+
+  const tb = $('goods-tbody');
+  if (!S.goods.length) {
+    // Empty state: ไม่มีสินค้าใน list
+    tb.innerHTML = `<tr><td colspan="10" class="ec">No items yet. Click "+ Add Item" to get started.</td></tr>`;
+    return;
+  }
+
+  // สร้าง <tr> HTML สำหรับแต่ละสินค้า
+  tb.innerHTML = S.goods.map(g => {
+    const st = status(g.expiry_date); // คำนวณ status badge
+    // กำหนด class สำหรับ row highlight (แดง=หมดอายุ, เหลือง=ใกล้หมด, ว่าง=ปกติ)
+    const rc = st.cls === 'bd' ? 'row-exp' : st.cls === 'bw' ? 'row-warn' : '';
     return `<tr class="${rc}">
       <td><strong>${h(g.goods_name)}</strong></td>
       <td><span class="type-b">${h(g.goods_type)}</span></td>
-      <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price,g.currency)}</td>
-      <td>${h(g.bought_from)||'—'}</td>
+      <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price, g.currency)}</td>
+      <td>${h(g.bought_from) || '—'}</td>
       <td>${fmtDate(g.date_bought)}</td>
       <td>${fmtDate(g.expiry_date)}</td>
       <td>${fmtDate(g.warranty_expiry_date)}</td>
-      <td>${h(g.location_stored)||'—'}</td>
+      <td>${h(g.location_stored) || '—'}</td>
       <td><span class="badge ${st.cls}">${st.lbl}</span></td>
       <td class="ac">
         <button class="btn-sec sm" style="margin-right:3px" onclick="openGoodModal('${a(g.id)}')">Edit</button>
@@ -623,294 +1350,626 @@ async function renderList(){
     </tr>`;
   }).join('');
 }
-async function openGoodModal(gid){
-  S.editGid=gid;S.fromSearch=false;
-  $('mg-title').textContent=gid?'Edit Item':'Add Item';
-  ['g-name','g-bf','g-db','g-exp','g-wv','g-wexp','g-loc','g-desc','g-price'].forEach(id=>$(id).value='');
-  $('g-type').value='Food';$('g-wu').value='months';$('g-curr').value='THB';
-  if(gid){
-    const{data}=await sb.from('goods').select('*').eq('id',gid).single();
-    if(data){
-      $('g-type').value=data.goods_type||'Others';
-      $('g-name').value=data.goods_name||'';
-      $('g-bf').value=data.bought_from||'';
-      $('g-db').value=data.date_bought||'';
-      $('g-exp').value=data.expiry_date||'';
-      $('g-wv').value=data.warranty_duration_value||'';
-      $('g-wu').value=data.warranty_duration_unit||'months';
-      $('g-wexp').value=data.warranty_expiry_date||'';
-      $('g-loc').value=data.location_stored||'';
-      $('g-desc').value=data.description||'';
-      $('g-price').value=data.price!=null?data.price:'';
-      $('g-curr').value=data.currency||'THB';
+
+// openGoodModal — เปิด modal เพิ่ม (gid=null) หรือแก้ไขสินค้า (gid=ID)
+async function openGoodModal(gid) {
+  S.editGid = gid;         // เก็บ ID สำหรับ saveGood() รู้ว่า insert หรือ update
+  S.fromSearch = false;    // reset flag (เปิดจาก list-detail ไม่ใช่ search)
+  $('mg-title').textContent = gid ? 'Edit Item' : 'Add Item'; // เปลี่ยน title
+
+  // ล้างค่าทุก input ก่อน (ป้องกันค่าเก่าค้าง)
+  ['g-name','g-bf','g-db','g-exp','g-wv','g-wexp','g-loc','g-desc','g-price']
+    .forEach(id => $(id).value = '');
+  $('g-type').value = 'Food';    // reset type เป็น default
+  $('g-wu').value   = 'months';  // reset warranty unit เป็น months (พบบ่อยที่สุด)
+  $('g-curr').value = 'THB';     // reset currency เป็น THB (default สำหรับผู้ใช้ไทย)
+
+  if (gid) {
+    // ── EDIT MODE: โหลดข้อมูลสินค้าจาก database มาใส่ form ──
+    const { data } = await sb.from('goods')
+      .select('*')
+      .eq('id', gid)
+      .single(); // .single() คาดหวัง 1 row, return object แทน array
+
+    if (data) {
+      // ใส่ค่าแต่ละ field ลง form
+      $('g-type').value  = data.goods_type    || 'Others';
+      $('g-name').value  = data.goods_name    || '';
+      $('g-bf').value    = data.bought_from   || '';
+      $('g-db').value    = data.date_bought   || '';
+      $('g-exp').value   = data.expiry_date   || '';
+      $('g-wv').value    = data.warranty_duration_value || '';
+      $('g-wu').value    = data.warranty_duration_unit  || 'months';
+      $('g-wexp').value  = data.warranty_expiry_date    || '';
+      $('g-loc').value   = data.location_stored || '';
+      $('g-desc').value  = data.description   || '';
+      $('g-price').value = data.price != null  ? data.price : ''; // != null รวม undefined ด้วย
+      $('g-curr').value  = data.currency      || 'THB';
     }
   }
   openModal('modal-good');
 }
-async function openGoodModalSearch(gid,lid){
-  S.fromSearch=true;S.lid=lid;
-  const l=S.lists.find(x=>x.id===lid);S.lname=l?l.name:'';
-  await openGoodModal(gid);
-}
-function calcWarranty(){
-  const v=$('g-wv').value,u=$('g-wu').value;
-  if(v&&parseInt(v)>0)$('g-wexp').value=addDur(v,u);
-}
-async function saveGood(){
-  const name=$('g-name').value.trim();
-  if(!name){toast('Goods name is required','err');return;}
-  const priceRaw=$('g-price').value;
-  const pay={
-    goods_type:$('g-type').value,goods_name:name,
-    bought_from:$('g-bf').value.trim()||null,
-    date_bought:$('g-db').value||null,
-    expiry_date:$('g-exp').value||null,
-    warranty_duration_value:$('g-wv').value?parseInt($('g-wv').value):null,
-    warranty_duration_unit:$('g-wu').value||null,
-    warranty_expiry_date:$('g-wexp').value||null,
-    location_stored:$('g-loc').value.trim()||null,
-    description:$('g-desc').value.trim()||null,
-    price:priceRaw!==''?parseFloat(priceRaw):null,
-    currency:$('g-curr').value||'THB',
-    updated_at:new Date().toISOString(),
-  };
-  let error;
-  if(S.editGid){({error}=await sb.from('goods').update(pay).eq('id',S.editGid));}
-  else{({error}=await sb.from('goods').insert({...pay,user_id:S.user.id,list_id:S.lid}));}
-  if(error){toast(error.message,'err');return;}
-  closeModal('modal-good');toast(S.editGid?'Item updated!':'Item added!');
-  // refresh item names cache
-  S.allItemNames=[...new Set([...S.allItemNames,name])].sort();
-  await checkExpiring();
-  if(S.fromSearch){S.fromSearch=false;await doSearch();}
-  else{await loadLists();await renderList();}
-}
-async function softDel(gid){
-  const g=S.goods.find(x=>x.id===gid);
-  const{error}=await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('id',gid);
-  if(error){toast(error.message,'err');return;}
-  toast(`"${g?.goods_name||'Item'}" moved to recycle bin`);
-  await checkExpiring();await loadLists();await renderList();
-}
-async function restoreGood(gid){
-  const{error}=await sb.from('goods').update({deleted_at:null}).eq('id',gid);
-  if(error){toast(error.message,'err');return;}
-  toast('Item restored!');await loadLists();await loadRecycle();await checkExpiring();
-}
-async function permDel(gid){
-  if(!confirm('Permanently delete? This cannot be undone.'))return;
-  const{error}=await sb.from('goods').delete().eq('id',gid);
-  if(error){toast(error.message,'err');return;}
-  toast('Permanently deleted');await loadLists();await loadRecycle();
-}
-async function purgeOldDeleted(){
-  const cut=new Date();cut.setDate(cut.getDate()-30);
-  await sb.from('goods').delete().eq('user_id',S.user.id).not('deleted_at','is',null).lt('deleted_at',cut.toISOString());
+
+// openGoodModalSearch — เปิด modal แก้ไขสินค้าจากหน้า Search
+async function openGoodModalSearch(gid, lid) {
+  S.fromSearch = true; // set flag ว่าเปิดจาก search (saveGood จะ refresh search แทน list)
+  S.lid = lid; // อัปเดต current list เพราะหน้า search อาจแสดงสินค้าจากหลาย list
+  const l = S.lists.find(x => x.id === lid); // หาชื่อ list จาก state
+  S.lname = l ? l.name : '';
+  await openGoodModal(gid); // เปิด modal แก้ไขปกติ
 }
 
-// ── MOVE / DUPLICATE ──────────────────────────────────
-async function openMoveModal(gid){
-  const g=S.goods.find(x=>x.id===gid);
-  if(!g)return;
-  S.moveGid=gid;
-  $('mv-item-name').textContent=g.goods_name;
-  const others=S.lists.filter(l=>l.id!==S.lid);
-  if(!others.length){toast('Create another list first to move or duplicate items.','err');return;}
-  $('mv-list').innerHTML=others.map(l=>`<option value="${a(l.id)}">${h(l.name)}</option>`).join('');
+// calcWarranty — คำนวณวันหมดรับประกันอัตโนมัติ เรียกเมื่อ user พิมพ์ duration หรือเปลี่ยน unit
+function calcWarranty() {
+  const v = $('g-wv').value; // ค่าตัวเลข duration
+  const u = $('g-wu').value; // หน่วย (days/weeks/months/years)
+  if (v && parseInt(v) > 0) { // เฉพาะเมื่อมีค่าและมากกว่า 0
+    $('g-wexp').value = addDur(v, u); // คำนวณวันหมดอายุและใส่ใน input
+    // user ยังสามารถแก้ไข g-wexp ได้เองถ้าวันจริงต่างจากที่คำนวณ
+  }
+}
+
+// saveGood — บันทึกสินค้า (insert ใหม่ หรือ update ขึ้นอยู่กับ S.editGid)
+async function saveGood() {
+  const name = $('g-name').value.trim();
+  if (!name) { toast('Goods name is required', 'err'); return; } // ชื่อสินค้าต้องมี
+
+  const priceRaw = $('g-price').value; // ดึงค่า price ก่อนแปลง
+
+  // รวบรวมข้อมูลทั้งหมดจาก form เป็น payload object
+  const pay = {
+    goods_type:              $('g-type').value,
+    goods_name:              name,
+    bought_from:             $('g-bf').value.trim() || null, // ว่าง = null (ไม่ใช่ string ว่าง)
+    date_bought:             $('g-db').value  || null,
+    expiry_date:             $('g-exp').value || null,
+    warranty_duration_value: $('g-wv').value  ? parseInt($('g-wv').value) : null, // แปลงเป็น int หรือ null
+    warranty_duration_unit:  $('g-wu').value  || null,
+    warranty_expiry_date:    $('g-wexp').value || null,
+    location_stored:         $('g-loc').value.trim() || null,
+    description:             $('g-desc').value.trim() || null,
+    price:                   priceRaw !== '' ? parseFloat(priceRaw) : null, // แปลงเป็น number หรือ null
+    currency:                $('g-curr').value || 'THB',
+    updated_at:              new Date().toISOString(), // timestamp อัปเดตล่าสุด
+  };
+
+  let error;
+  if (S.editGid) {
+    // ── UPDATE ────────────────────────────────────────────
+    ({ error } = await sb.from('goods').update(pay).eq('id', S.editGid));
+  } else {
+    // ── INSERT ────────────────────────────────────────────
+    // บวกเพิ่ม user_id และ list_id (ไม่รวมใน pay เพราะ update ไม่ต้องเปลี่ยน)
+    ({ error } = await sb.from('goods').insert({
+      ...pay,          // spread ค่าจาก form
+      user_id: S.user.id, // เพิ่ม user_id เพื่อผูกกับเจ้าของ
+      list_id: S.lid       // เพิ่ม list_id เพื่อผูกกับ list ปัจจุบัน
+    }));
+  }
+
+  if (error) { toast(error.message, 'err'); return; }
+  closeModal('modal-good');
+  toast(S.editGid ? 'Item updated!' : 'Item added!');
+
+  // อัปเดต cache ชื่อสินค้าสำหรับ search autocomplete
+  S.allItemNames = [...new Set([...S.allItemNames, name])].sort();
+  // Set ป้องกันชื่อซ้ำ, spread กลับเป็น array, sort เรียงตัวอักษร
+
+  await checkExpiring(); // ตรวจ notification ใหม่เผื่อ expiry_date เปลี่ยน
+
+  // refresh UI ตาม context ที่เปิด modal
+  if (S.fromSearch) {
+    S.fromSearch = false; // reset flag
+    await doSearch(); // refresh ผลการค้นหา
+  } else {
+    await loadLists(); // อัปเดต count บน list card
+    await renderList(); // refresh ตารางสินค้า
+  }
+}
+
+// softDel — soft delete สินค้า (ย้ายไป recycle bin โดยใส่ deleted_at)
+async function softDel(gid) {
+  const g = S.goods.find(x => x.id === gid); // หาชื่อสินค้าสำหรับ toast message
+  const { error } = await sb.from('goods')
+    .update({ deleted_at: new Date().toISOString() }) // ใส่ timestamp วันที่ลบ
+    .eq('id', gid);
+  if (error) { toast(error.message, 'err'); return; }
+  toast(`"${g?.goods_name || 'Item'}" moved to recycle bin`); // แสดงชื่อสินค้าที่ย้าย
+  await checkExpiring(); // อาจลด notification ถ้าสินค้าที่ลบคือตัวที่ใกล้หมดอายุ
+  await loadLists();     // อัปเดต count บน list card
+  await renderList();    // refresh ตาราง (สินค้านั้นหายไป)
+}
+
+// restoreGood — คืนสินค้าจาก recycle bin กลับ list เดิม (ล้าง deleted_at)
+async function restoreGood(gid) {
+  const { error } = await sb.from('goods')
+    .update({ deleted_at: null }) // null = ไม่ถูกลบ = แสดงในรายการปกติ
+    .eq('id', gid);
+  if (error) { toast(error.message, 'err'); return; }
+  toast('Item restored!');
+  await loadLists();    // อัปเดต count
+  await loadRecycle();  // refresh recycle bin (สินค้าหายไปจาก recycle bin)
+  await checkExpiring(); // ตรวจ notification ใหม่ (สินค้าที่ restore อาจใกล้หมดอายุ)
+}
+
+// permDel — ลบสินค้าถาวร (hard delete ออกจาก database)
+async function permDel(gid) {
+  if (!confirm('Permanently delete? This cannot be undone.')) return; // ถามยืนยัน
+  const { error } = await sb.from('goods').delete().eq('id', gid); // DELETE จาก database
+  if (error) { toast(error.message, 'err'); return; }
+  toast('Permanently deleted');
+  await loadLists();   // อัปเดต count
+  await loadRecycle(); // refresh recycle bin
+}
+
+// purgeOldDeleted — ลบถาวรสินค้าที่อยู่ใน recycle bin มากกว่า 30 วัน
+// เรียกอัตโนมัติทุกครั้งที่ login
+async function purgeOldDeleted() {
+  const cut = new Date();
+  cut.setDate(cut.getDate() - 30); // วันที่ 30 วันที่แล้ว = cutoff date
+  await sb.from('goods')
+    .delete()
+    .eq('user_id', S.user.id)       // เฉพาะสินค้าของ user นี้
+    .not('deleted_at', 'is', null)  // เฉพาะสินค้าที่ถูก soft delete แล้ว
+    .lt('deleted_at', cut.toISOString()); // deleted_at ก่อน cutoff (เกิน 30 วัน)
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MOVE / DUPLICATE — ย้ายหรือทำสำเนาสินค้าไป List อื่น
+// ══════════════════════════════════════════════════════════════════
+
+// openMoveModal — เปิด modal Move/Duplicate สำหรับสินค้า gid
+async function openMoveModal(gid) {
+  const g = S.goods.find(x => x.id === gid); // หาข้อมูลสินค้าจาก state
+  if (!g) return;
+  S.moveGid = gid; // เก็บ ID สำหรับ moveItem/duplicateItem
+  $('mv-item-name').textContent = g.goods_name; // แสดงชื่อสินค้าใน modal
+
+  // สร้าง dropdown ตัวเลือก list ปลายทาง (ไม่รวม list ที่สินค้าอยู่ตอนนี้)
+  const others = S.lists.filter(l => l.id !== S.lid);
+  if (!others.length) {
+    // ไม่มี list อื่น: แจ้ง user ให้สร้าง list เพิ่มก่อน
+    toast('Create another list first to move or duplicate items.', 'err');
+    return;
+  }
+  $('mv-list').innerHTML = others
+    .map(l => `<option value="${a(l.id)}">${h(l.name)}</option>`)
+    .join('');
   openModal('modal-move');
 }
-async function moveItem(){
-  const tLid=$('mv-list').value;
-  if(!tLid){toast('Select a target list','err');return;}
-  const{error}=await sb.from('goods').update({list_id:tLid,updated_at:new Date().toISOString()}).eq('id',S.moveGid);
-  if(error){toast(error.message,'err');return;}
-  closeModal('modal-move');toast('Item moved!');
-  await loadLists();await renderList();
-}
-async function duplicateItem(){
-  const tLid=$('mv-list').value;
-  if(!tLid){toast('Select a target list','err');return;}
-  const{data:g}=await sb.from('goods').select('*').eq('id',S.moveGid).single();
-  if(!g){toast('Item not found','err');return;}
-  const{id,created_at,updated_at,list_id,...rest}=g;
-  const{error}=await sb.from('goods').insert({...rest,list_id:tLid,user_id:S.user.id,deleted_at:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
-  if(error){toast(error.message,'err');return;}
-  closeModal('modal-move');toast('Item duplicated to target list!');
-  await loadLists();
+
+// moveItem — ย้ายสินค้าออกจาก list ปัจจุบัน ไปยัง list ที่เลือก
+async function moveItem() {
+  const tLid = $('mv-list').value; // list_id ปลายทางที่ user เลือก
+  if (!tLid) { toast('Select a target list', 'err'); return; }
+  const { error } = await sb.from('goods')
+    .update({
+      list_id:    tLid,                    // เปลี่ยน list_id เป็น list ปลายทาง
+      updated_at: new Date().toISOString() // อัปเดต timestamp
+    })
+    .eq('id', S.moveGid); // เฉพาะสินค้าที่เลือก
+  if (error) { toast(error.message, 'err'); return; }
+  closeModal('modal-move');
+  toast('Item moved!');
+  await loadLists();  // อัปเดต count ของทั้งสอง list
+  await renderList(); // refresh ตาราง (สินค้าหายจาก list ปัจจุบัน)
 }
 
-// ── STORES ────────────────────────────────────────────
-async function loadStores(){
-  const{data,error}=await sb.from('stores').select('name').order('name');
-  if(error){console.warn('stores table unavailable:',error.message);return;}
-  S.stores=data||[];
-}
-// shared autocomplete for "bought from" fields
-function showBfSugg(val,ddId){
-  const dd=$(ddId);
-  if(!val||val.length<1){dd.style.display='none';return;}
-  const low=val.toLowerCase();
-  const all=[...S.stores.map(s=>s.name),'Others'];
-  const unique=[...new Set(all)];
-  const matches=unique.filter(n=>n.toLowerCase().includes(low)).slice(0,8);
-  if(!matches.length){dd.style.display='none';return;}
-  dd.innerHTML=matches.map(n=>`<div class="sugg-item" onmousedown="pickBfSugg('${a(n)}','${ddId}')">${highlight(n,val)}</div>`).join('');
-  dd.style.display='block';
-}
-function pickBfSugg(name,ddId){
-  // determine which input to fill based on the dropdown id
-  const inputId=ddId==='g-bf-sugg'?'g-bf':'f-bf';
-  $(inputId).value=name;hideSugg(ddId);
-  if(ddId==='f-bf-sugg')doSearch();
-}
-function hideSugg(ddId){const dd=$(ddId);if(dd)dd.style.display='none';}
+// duplicateItem — ทำสำเนาสินค้าไปยัง list ที่เลือก (ของเดิมยังอยู่)
+async function duplicateItem() {
+  const tLid = $('mv-list').value;
+  if (!tLid) { toast('Select a target list', 'err'); return; }
 
-// ── NOTIFICATIONS ─────────────────────────────────────
-async function checkExpiring(){
-  const wk=new Date();wk.setDate(wk.getDate()+7);
-  const{data}=await sb.from('goods').select('id,goods_name,expiry_date,list_id').eq('user_id',S.user.id).is('deleted_at',null).not('expiry_date','is',null).lte('expiry_date',wk.toISOString().split('T')[0]);
-  S.expiring=(data||[]).filter(i=>!S.dismissed.has(i.id));
-  renderNotifs();
+  // โหลดข้อมูลสินค้าเต็มๆ จาก database
+  const { data: g } = await sb.from('goods').select('*').eq('id', S.moveGid).single();
+  if (!g) { toast('Item not found', 'err'); return; }
+
+  // Destructure: แยก field ที่ไม่ต้อง copy ออก (id, created_at, updated_at, list_id)
+  // ...rest = ข้อมูลที่เหลือทั้งหมดที่จะ copy ไป
+  const { id, created_at, updated_at, list_id, ...rest } = g;
+
+  const { error } = await sb.from('goods').insert({
+    ...rest,                             // copy ทุก field (รวม price, currency, warranty ฯลฯ)
+    list_id:    tLid,                    // list ปลายทาง (ต่างจากต้นฉบับ)
+    user_id:    S.user.id,              // เจ้าของเดิม
+    deleted_at: null,                    // ให้ copy ไม่ถูกลบ (เผื่อต้นฉบับถูกลบ)
+    created_at: new Date().toISOString(), // timestamp ใหม่ของ copy
+    updated_at: new Date().toISOString()
+  });
+  if (error) { toast(error.message, 'err'); return; }
+  closeModal('modal-move');
+  toast('Item duplicated to target list!');
+  await loadLists(); // อัปเดต count ของ list ปลายทาง (เพิ่มขึ้น 1)
 }
-function renderNotifs(){
-  const bar=$('notif-bar');
-  if(!S.expiring.length){bar.style.display='none';return;}
-  bar.style.display='block';
-  bar.innerHTML=S.expiring.map(item=>{
-    const d=daysTo(item.expiry_date);
-    const list=S.lists.find(l=>l.id===item.list_id);
-    const listName=list?` in <strong>${h(list.name)}</strong>`:'';
-    const msg=d<0?`<strong>${h(item.goods_name)}</strong>${listName} expired on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`
-      :d===0?`<strong>${h(item.goods_name)}</strong>${listName} expires today, do you want to remove it from the list?`
-      :`<strong>${h(item.goods_name)}</strong>${listName} will expire on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`;
-     return `<div class="notif-item">
-      <span class="notif-ic">${d<=0?'🔴':'⚠️'}</span>
+
+// ══════════════════════════════════════════════════════════════════
+// STORES — โหลดชื่อร้านค้าสำหรับ autocomplete
+// ══════════════════════════════════════════════════════════════════
+
+// loadStores — โหลดชื่อร้านค้าทั้งหมดจากตาราง stores
+async function loadStores() {
+  const { data, error } = await sb.from('stores')
+    .select('name')      // ดึงแค่ name ไม่ต้องการ id หรือ created_at
+    .order('name');      // เรียง A-Z สะดวกใน dropdown
+  if (error) {
+    // ถ้าตาราง stores ยังไม่ได้สร้าง: แจ้ง console ไม่ crash app
+    console.warn('stores table unavailable:', error.message);
+    return;
+  }
+  S.stores = data || []; // เก็บลง state
+}
+
+// showBfSugg — แสดง dropdown suggestion สำหรับ "Bought From" input
+// ddId = ID ของ dropdown element (g-bf-sugg หรือ f-bf-sugg)
+// ใช้ function เดียวกับทั้ง modal form และ search filter
+function showBfSugg(val, ddId) {
+  const dd = $(ddId);
+  if (!val || val.length < 1) { dd.style.display = 'none'; return; } // ว่าง = ซ่อน
+
+  const low = val.toLowerCase(); // แปลงคำค้นเป็น lowercase สำหรับ case-insensitive matching
+
+  // รวมชื่อร้านค้าจาก database + "Others" เป็น hardcoded option
+  const all = [...S.stores.map(s => s.name), 'Others'];
+  const unique = [...new Set(all)]; // ป้องกัน duplicate (ถ้า "Others" มีอยู่ใน database แล้ว)
+
+  // กรองเฉพาะชื่อที่ match คำค้น เอาแค่ 8 รายการแรก
+  const matches = unique.filter(n => n.toLowerCase().includes(low)).slice(0, 8);
+  if (!matches.length) { dd.style.display = 'none'; return; }
+
+  // สร้าง HTML ของ suggestion items พร้อม highlight ส่วนที่ match
+  dd.innerHTML = matches
+    .map(n => `<div class="sugg-item" onmousedown="pickBfSugg('${a(n)}','${ddId}')">${highlight(n, val)}</div>`)
+    .join('');
+  // ใช้ onmousedown แทน onclick เพราะ mousedown fires ก่อน blur ของ input
+  // ถ้าใช้ onclick: blur ของ input → setTimeout ซ่อน dropdown → onclick ไม่ทำงาน
+  dd.style.display = 'block';
+}
+
+// pickBfSugg — เมื่อ user เลือก suggestion (Bought From)
+function pickBfSugg(name, ddId) {
+  // หา input ID จาก dropdown ID
+  const inputId = ddId === 'g-bf-sugg' ? 'g-bf' : 'f-bf';
+  $(inputId).value = name; // ใส่ชื่อที่เลือกลง input
+  hideSugg(ddId);          // ซ่อน dropdown
+  if (ddId === 'f-bf-sugg') doSearch(); // ถ้าเลือกจาก search filter: ค้นหาทันที
+}
+
+// hideSugg — ซ่อน dropdown suggestion
+function hideSugg(ddId) {
+  const dd = $(ddId);
+  if (dd) dd.style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NOTIFICATIONS — แจ้งเตือนสินค้าหมดอายุ/ใกล้หมดอายุ
+// ══════════════════════════════════════════════════════════════════
+
+// checkExpiring — ตรวจสอบสินค้าที่ expiry_date ≤ 7 วัน จาก database
+async function checkExpiring() {
+  const wk = new Date();
+  wk.setDate(wk.getDate() + 7); // วันที่ 7 วันข้างหน้า = threshold
+
+  const { data } = await sb.from('goods')
+    .select('id,goods_name,expiry_date,list_id') // ข้อมูลที่ต้องการสำหรับ notification
+    .eq('user_id', S.user.id)
+    .is('deleted_at', null)              // ไม่รวมที่อยู่ใน recycle bin
+    .not('expiry_date', 'is', null)      // ต้องมีวันหมดอายุ
+    .lte('expiry_date', wk.toISOString().split('T')[0]); // หมดอายุก่อนหรือภายใน 7 วัน
+
+  // กรองออกรายการที่ user dismiss ไปแล้ว (ใช้ Set.has สำหรับ O(1) lookup)
+  S.expiring = (data || []).filter(i => !S.dismissed.has(i.id));
+  renderNotifs(); // อัปเดต notification bar
+}
+
+// renderNotifs — render notification bar จาก S.expiring
+function renderNotifs() {
+  const bar = $('notif-bar');
+  if (!S.expiring.length) {
+    bar.style.display = 'none'; // ไม่มี notification: ซ่อน bar
+    return;
+  }
+  bar.style.display = 'block'; // มี notification: แสดง bar
+
+  bar.innerHTML = S.expiring.map(item => {
+    const d = daysTo(item.expiry_date); // จำนวนวันที่เหลือ (ลบ = ผ่านแล้ว)
+    // หาชื่อ list จาก state (ไม่ query database ซ้ำ)
+    const list = S.lists.find(l => l.id === item.list_id);
+    const listName = list ? ` in <strong>${h(list.name)}</strong>` : '';
+
+    // สร้างข้อความ notification ตาม state (หมดแล้ว/วันนี้/ใกล้หมด)
+    const msg = d < 0
+      ? `<strong>${h(item.goods_name)}</strong>${listName} expired on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`
+      : d === 0
+      ? `<strong>${h(item.goods_name)}</strong>${listName} expires today, do you want to remove it from the list?`
+      : `<strong>${h(item.goods_name)}</strong>${listName} will expire on ${fmtDate(item.expiry_date)}, do you want to remove it from the list?`;
+
+    return `<div class="notif-item">
+      <span class="notif-ic">${d <= 0 ? '🔴' : '⚠️'}</span>
       <span class="notif-msg">${msg}</span>
       <div class="notif-acts">
+        <!-- notifRemove: soft delete สินค้านั้นทันที -->
         <button class="btn-d sm" onclick="notifRemove('${a(item.id)}','${a(item.list_id)}')">Remove</button>
+        <!-- notifDismiss: ซ่อน notification ชั่วคราว (จน refresh หน้า) -->
         <button class="btn-g sm" style="background:rgba(0,0,0,.06)" onclick="notifDismiss('${a(item.id)}')">Dismiss</button>
       </div>
     </div>`;
   }).join('');
 }
-function notifDismiss(id){S.dismissed.add(id);S.expiring=S.expiring.filter(i=>i.id!==id);renderNotifs();}
-async function notifRemove(id,lid){
-  await sb.from('goods').update({deleted_at:new Date().toISOString()}).eq('id',id);
-  S.dismissed.add(id);S.expiring=S.expiring.filter(i=>i.id!==id);renderNotifs();
-  if(S.lid===lid&&S.page==='list-detail')await renderList();
-  await loadLists();toast('Item removed');
+
+// notifDismiss — ซ่อน notification โดยเพิ่ม ID เข้า dismissed set
+function notifDismiss(id) {
+  S.dismissed.add(id);                               // เพิ่ม ID เข้า Set
+  S.expiring = S.expiring.filter(i => i.id !== id); // ลบออกจาก array
+  renderNotifs(); // re-render notification bar
 }
 
-// ── SEARCH ────────────────────────────────────────────
-async function initSearch(){
-  const sel=$('f-list');
-  sel.innerHTML='<option value="">All Lists</option>'+S.lists.map(l=>`<option value="${a(l.id)}">${h(l.name)}</option>`).join('');
-  // load all item names for keyword suggestions
-  const{data}=await sb.from('goods').select('goods_name').eq('user_id',S.user.id).is('deleted_at',null);
-  S.allItemNames=[...new Set((data||[]).map(g=>g.goods_name).filter(Boolean))].sort();
+// notifRemove — soft delete สินค้าจาก notification bar
+async function notifRemove(id, lid) {
+  await sb.from('goods')
+    .update({ deleted_at: new Date().toISOString() }) // soft delete
+    .eq('id', id);
+  S.dismissed.add(id); // ป้องกัน notification กลับมาก่อน re-fetch
+  S.expiring = S.expiring.filter(i => i.id !== id);
+  renderNotifs();
+  // ถ้ากำลังดูหน้า list ที่สินค้านั้นอยู่: refresh ตารางด้วย
+  if (S.lid === lid && S.page === 'list-detail') await renderList();
+  await loadLists(); // อัปเดต count และ expiry badge บน card
+  toast('Item removed');
 }
 
-// keyword autocomplete with keyboard nav
-let _kwMatches=[];
-function showKwSugg(val){
-  const dd=$('kw-sugg');S.kwIdx=-1;
-  if(!val||val.length<1){dd.style.display='none';_kwMatches=[];return;}
-  const low=val.toLowerCase();
-  _kwMatches=S.allItemNames.filter(n=>n.toLowerCase().includes(low)).slice(0,8);
-  if(!_kwMatches.length){dd.style.display='none';return;}
-  renderKwSugg(val);dd.style.display='block';
+// ══════════════════════════════════════════════════════════════════
+// SEARCH — ค้นหาสินค้าพร้อม filter และ autocomplete
+// ══════════════════════════════════════════════════════════════════
+
+// initSearch — เตรียม search page: populate list filter + โหลด item names
+async function initSearch() {
+  // populate dropdown ตัวเลือก list
+  const sel = $('f-list');
+  sel.innerHTML = '<option value="">All Lists</option>' +
+    S.lists.map(l => `<option value="${a(l.id)}">${h(l.name)}</option>`).join('');
+
+  // โหลดชื่อสินค้าทั้งหมดสำหรับ keyword autocomplete
+  const { data } = await sb.from('goods')
+    .select('goods_name')         // ดึงแค่ชื่อ ประหยัด bandwidth
+    .eq('user_id', S.user.id)
+    .is('deleted_at', null);      // ไม่รวมสินค้าใน recycle bin
+
+  // สร้าง array ชื่อ unique เรียง A-Z
+  S.allItemNames = [...new Set(
+    (data || []).map(g => g.goods_name).filter(Boolean) // filter(Boolean) ลบ null/undefined/empty string
+  )].sort();
 }
-function renderKwSugg(query){
-  $('kw-sugg').innerHTML=_kwMatches.map((n,i)=>`<div class="sugg-item${S.kwIdx===i?' highlighted':''}" onmousedown="pickKwSugg('${a(n)}')">${highlight(n,query)}</div>`).join('');
+
+// ── KEYWORD AUTOCOMPLETE ──────────────────────────────────────────
+
+let _kwMatches = []; // array ของ suggestion ปัจจุบัน (module-level variable สำหรับ keyboard nav)
+
+// showKwSugg — แสดง dropdown suggestion เมื่อพิมพ์ keyword
+function showKwSugg(val) {
+  const dd = $('kw-sugg');
+  S.kwIdx = -1; // reset keyboard nav index ทุกครั้งที่พิมพ์
+
+  if (!val || val.length < 1) {
+    dd.style.display = 'none';
+    _kwMatches = [];
+    return;
+  }
+  const low = val.toLowerCase();
+  // กรองชื่อสินค้าที่ตรงกับ keyword (case-insensitive)
+  _kwMatches = S.allItemNames.filter(n => n.toLowerCase().includes(low)).slice(0, 8);
+  if (!_kwMatches.length) { dd.style.display = 'none'; return; }
+  renderKwSugg(val); // render HTML ของ suggestion
+  dd.style.display = 'block';
 }
-function pickKwSugg(name){$('f-kw').value=name;hideKwSugg();doSearch();}
-function hideKwSugg(){$('kw-sugg').style.display='none';S.kwIdx=-1;}
-function handleKwKey(e){
-  if(!_kwMatches.length)return;
-  if(e.key==='ArrowDown'){e.preventDefault();S.kwIdx=Math.min(S.kwIdx+1,_kwMatches.length-1);renderKwSugg($('f-kw').value);}
-  else if(e.key==='ArrowUp'){e.preventDefault();S.kwIdx=Math.max(S.kwIdx-1,-1);renderKwSugg($('f-kw').value);}
-  else if(e.key==='Enter'){
-    if(S.kwIdx>=0){pickKwSugg(_kwMatches[S.kwIdx]);}
-    else{hideKwSugg();doSearch();}
-  }else if(e.key==='Escape'){hideKwSugg();}
+
+// renderKwSugg — render HTML ของ keyword suggestions (แยกออกมาเพราะ keyboard nav ต้อง re-render)
+function renderKwSugg(query) {
+  $('kw-sugg').innerHTML = _kwMatches.map((n, i) =>
+    // เพิ่ม class 'highlighted' ให้ item ที่ keyboard nav ชี้อยู่ (S.kwIdx)
+    `<div class="sugg-item${S.kwIdx === i ? ' highlighted' : ''}" onmousedown="pickKwSugg('${a(n)}')">${highlight(n, query)}</div>`
+  ).join('');
 }
-async function doSearch(){
-  const kw=$('f-kw').value.trim(),type=$('f-type').value,bf=$('f-bf').value.trim();
-  const lid=$('f-list').value,df=$('f-df').value,dt=$('f-dt').value,ef=$('f-ef').value,et=$('f-et').value;
-  let q=sb.from('goods').select('*,lists(name)').eq('user_id',S.user.id).is('deleted_at',null).order('goods_name');
-  if(kw)q=q.or(`goods_name.ilike.%${kw}%,bought_from.ilike.%${kw}%,location_stored.ilike.%${kw}%,description.ilike.%${kw}%`);
-  if(type)q=q.eq('goods_type',type);
-  if(bf)q=q.ilike('bought_from',`%${bf}%`);
-  if(lid)q=q.eq('list_id',lid);
-  if(df)q=q.gte('date_bought',df);
-  if(dt)q=q.lte('date_bought',dt);
-  if(ef)q=q.gte('expiry_date',ef);
-  if(et)q=q.lte('expiry_date',et);
-  const{data,error}=await q;
-  if(error){toast(error.message,'err');return;}
-  renderSearchResults(data||[]);
+
+// pickKwSugg — เมื่อ user เลือก keyword suggestion
+function pickKwSugg(name) {
+  $('f-kw').value = name; // ใส่ชื่อที่เลือกลง input
+  hideKwSugg();           // ซ่อน dropdown
+  doSearch();             // ค้นหาทันที
 }
-function clearSearch(){
-  ['f-kw','f-bf','f-df','f-dt','f-ef','f-et'].forEach(id=>$(id).value='');
-  $('f-type').value='';$('f-list').value='';
-  $('search-results').innerHTML='';hideKwSugg();hideSugg('f-bf-sugg');
+
+// hideKwSugg — ซ่อน keyword suggestion dropdown
+function hideKwSugg() {
+  $('kw-sugg').style.display = 'none';
+  S.kwIdx = -1; // reset nav index
 }
-function renderSearchResults(res){
-  const c=$('search-results');
-  if(!res.length){c.innerHTML=`<div class="empty"><div class="empty-ic">🔍</div><p>No items found. Try different filters.</p></div>`;return;}
-  c.innerHTML=`<div class="tw"><table class="gt">
-    <thead><tr><th>Name</th><th>Type</th><th>Price</th><th>List</th><th>Bought From</th><th>Date Bought</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>${res.map(g=>{
-      const st=status(g.expiry_date);
-      const rc=st.cls==='bd'?'row-exp':st.cls==='bw'?'row-warn':'';
-      return `<tr class="${rc}">
-        <td><strong>${h(g.goods_name)}</strong></td>
-        <td><span class="type-b">${h(g.goods_type)}</span></td>
-        <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price,g.currency)}</td>
-        <td>${h(g.lists?.name)||'—'}</td>
-        <td>${h(g.bought_from)||'—'}</td>
-        <td>${fmtDate(g.date_bought)}</td>
-        <td>${fmtDate(g.expiry_date)}</td>
-        <td><span class="badge ${st.cls}">${st.lbl}</span></td>
-        <td><button class="btn-sec sm" onclick="openGoodModalSearch('${a(g.id)}','${a(g.list_id)}')">Edit</button></td>
-      </tr>`;
-    }).join('')}</tbody>
+
+// handleKwKey — จัดการ keyboard events ใน keyword input
+function handleKwKey(e) {
+  if (!_kwMatches.length) return; // ไม่มี suggestion: ไม่ทำอะไร
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault(); // ป้องกัน cursor กระโดดในกล่อง input
+    S.kwIdx = Math.min(S.kwIdx + 1, _kwMatches.length - 1); // เลื่อนลง ไม่เกิน index สุดท้าย
+    renderKwSugg($('f-kw').value); // re-render เพื่อ highlight item ใหม่
+  }
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    S.kwIdx = Math.max(S.kwIdx - 1, -1); // เลื่อนขึ้น ไม่ต่ำกว่า -1 (ไม่มี highlight)
+    renderKwSugg($('f-kw').value);
+  }
+  else if (e.key === 'Enter') {
+    if (S.kwIdx >= 0) {
+      pickKwSugg(_kwMatches[S.kwIdx]); // เลือก suggestion ที่ keyboard nav ชี้อยู่
+    } else {
+      hideKwSugg(); // ไม่มี highlight: ซ่อน dropdown แล้วค้นหา
+      doSearch();
+    }
+  }
+  else if (e.key === 'Escape') {
+    hideKwSugg(); // กด Esc: ซ่อน dropdown
+  }
+}
+
+// doSearch — ค้นหาสินค้าด้วย filter ทั้งหมดที่ user กรอก
+async function doSearch() {
+  // รวบรวมค่า filter ทั้งหมด
+  const kw   = $('f-kw').value.trim();  // keyword (ชื่อ, ที่เก็บ, notes)
+  const type = $('f-type').value;        // ประเภทสินค้า
+  const bf   = $('f-bf').value.trim();  // ร้านค้า
+  const lid  = $('f-list').value;        // list ที่กรอง
+  const df   = $('f-df').value;          // date_bought from
+  const dt   = $('f-dt').value;          // date_bought to
+  const ef   = $('f-ef').value;          // expiry_date from
+  const et   = $('f-et').value;          // expiry_date to
+
+  // เริ่มต้น query builder (pattern: สร้าง query ทีละ condition)
+  let q = sb.from('goods')
+    .select('*,lists(name)')          // join กับตาราง lists เพื่อแสดงชื่อ list
+    .eq('user_id', S.user.id)         // เฉพาะสินค้าของ user นี้
+    .is('deleted_at', null)           // ไม่รวม recycle bin
+    .order('goods_name');             // เรียงตามชื่อสินค้า A-Z
+
+  // เพิ่ม condition ตาม filter ที่กรอก (เฉพาะที่มีค่า ป้องกัน filter ว่างกรองผิด)
+  if (kw)   q = q.or(`goods_name.ilike.%${kw}%,bought_from.ilike.%${kw}%,location_stored.ilike.%${kw}%,description.ilike.%${kw}%`);
+  // ilike = case-insensitive LIKE, or() ค้นหาหลาย column พร้อมกัน
+  if (type) q = q.eq('goods_type', type);           // filter ประเภทตรงๆ
+  if (bf)   q = q.ilike('bought_from', `%${bf}%`);  // filter ร้านค้า (partial match)
+  if (lid)  q = q.eq('list_id', lid);               // filter list
+  if (df)   q = q.gte('date_bought', df);            // date_bought >= from
+  if (dt)   q = q.lte('date_bought', dt);            // date_bought <= to
+  if (ef)   q = q.gte('expiry_date', ef);            // expiry_date >= from
+  if (et)   q = q.lte('expiry_date', et);            // expiry_date <= to
+
+  const { data, error } = await q; // execute query
+  if (error) { toast(error.message, 'err'); return; }
+  renderSearchResults(data || []);
+}
+
+// clearSearch — ล้าง filter ทั้งหมดและผลการค้นหา
+function clearSearch() {
+  ['f-kw','f-bf','f-df','f-dt','f-ef','f-et'].forEach(id => $(id).value = '');
+  $('f-type').value = '';   // reset select dropdown
+  $('f-list').value = '';
+  $('search-results').innerHTML = ''; // ล้างผลการค้นหา
+  hideKwSugg();             // ซ่อน keyword suggestion
+  hideSugg('f-bf-sugg');    // ซ่อน bought-from suggestion
+}
+
+// renderSearchResults — render ตารางผลการค้นหา
+function renderSearchResults(res) {
+  const c = $('search-results');
+  if (!res.length) {
+    // ไม่พบผลลัพธ์: แสดง empty state
+    c.innerHTML = `<div class="empty"><div class="empty-ic">🔍</div><p>No items found. Try different filters.</p></div>`;
+    return;
+  }
+
+  c.innerHTML = `<div class="tw"><table class="gt">
+    <thead><tr>
+      <th>Name</th><th>Type</th><th>Price</th><th>List</th>
+      <th>Bought From</th><th>Date Bought</th><th>Expiry</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${res.map(g => {
+        const st = status(g.expiry_date);
+        const rc = st.cls === 'bd' ? 'row-exp' : st.cls === 'bw' ? 'row-warn' : '';
+        return `<tr class="${rc}">
+          <td><strong>${h(g.goods_name)}</strong></td>
+          <td><span class="type-b">${h(g.goods_type)}</span></td>
+          <td style="white-space:nowrap;font-weight:500">${fmtPrice(g.price, g.currency)}</td>
+          <td>${h(g.lists?.name) || '—'}</td>
+          <!-- g.lists?.name: optional chaining ป้องกัน error ถ้า join ไม่ได้ข้อมูล -->
+          <td>${h(g.bought_from) || '—'}</td>
+          <td>${fmtDate(g.date_bought)}</td>
+          <td>${fmtDate(g.expiry_date)}</td>
+          <td><span class="badge ${st.cls}">${st.lbl}</span></td>
+          <td>
+            <!-- openGoodModalSearch: บอก context ว่าเปิดจาก search page
+                 เพื่อให้ saveGood() refresh search results แทน list detail -->
+            <button class="btn-sec sm" onclick="openGoodModalSearch('${a(g.id)}','${a(g.list_id)}')">Edit</button>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
   </table></div>`;
 }
 
-// ── RECYCLE BIN ───────────────────────────────────────
-async function loadRecycle(){
-  const{data}=await sb.from('goods').select('*,lists(name)').eq('user_id',S.user.id).not('deleted_at','is',null).order('deleted_at',{ascending:false});
-  const items=data||[],c=$('recycle-list');
-  if(!items.length){c.innerHTML=`<div class="empty"><div class="empty-ic">🗑️</div><p>Recycle bin is empty.</p></div>`;return;}
-  c.innerHTML=`<div class="tw"><table class="gt">
-    <thead><tr><th>Name</th><th>Type</th><th>Price</th><th>List</th><th>Expiry</th><th>Removed On</th><th>Auto-Delete In</th><th>Actions</th></tr></thead>
-    <tbody>${items.map(g=>{
-      const ago=Math.floor((Date.now()-new Date(g.deleted_at))/86400000);
-      const left=Math.max(0,30-ago);
-      return `<tr>
-        <td><strong>${h(g.goods_name)}</strong></td>
-        <td><span class="type-b">${h(g.goods_type)}</span></td>
-        <td style="white-space:nowrap">${fmtPrice(g.price,g.currency)}</td>
-        <td>${h(g.lists?.name)||'—'}</td>
-        <td>${fmtDate(g.expiry_date)}</td>
-        <td>${fmtDate(g.deleted_at.split('T')[0])}</td>
-        <td><span class="badge ${left<=3?'bd':left<=7?'bw':'bg'}">${left} day${left!==1?'s':''}</span></td>
-        <td class="ac">
-          <button class="btn-s sm" style="margin-right:3px" onclick="restoreGood('${a(g.id)}')">Restore</button>
-          <button class="btn-d sm" onclick="permDel('${a(g.id)}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join('')}</tbody>
+// ══════════════════════════════════════════════════════════════════
+// RECYCLE BIN — แสดงและจัดการสินค้าที่ถูก soft delete
+// ══════════════════════════════════════════════════════════════════
+
+// loadRecycle — โหลดและ render สินค้าทั้งหมดใน recycle bin
+async function loadRecycle() {
+  const { data } = await sb.from('goods')
+    .select('*,lists(name)')        // join lists เพื่อแสดงชื่อ list ต้นทาง
+    .eq('user_id', S.user.id)
+    .not('deleted_at', 'is', null)  // เฉพาะสินค้าที่ถูก soft delete (deleted_at ไม่ใช่ null)
+    .order('deleted_at', { ascending: false }); // ลบล่าสุดก่อน
+
+  const items = data || [];
+  const c = $('recycle-list');
+
+  if (!items.length) {
+    c.innerHTML = `<div class="empty"><div class="empty-ic">🗑️</div><p>Recycle bin is empty.</p></div>`;
+    return;
+  }
+
+  c.innerHTML = `<div class="tw"><table class="gt">
+    <thead><tr>
+      <th>Name</th><th>Type</th><th>Price</th><th>List</th>
+      <th>Expiry</th><th>Removed On</th><th>Auto-Delete In</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+      ${items.map(g => {
+        // คำนวณจำนวนวันที่อยู่ใน recycle bin
+        const ago  = Math.floor((Date.now() - new Date(g.deleted_at)) / 86400000);
+        const left = Math.max(0, 30 - ago); // วันที่เหลือก่อนลบถาวร (ไม่ต่ำกว่า 0)
+        // กำหนดสี badge ตามความเร่งด่วน (≤3 วัน = แดง, ≤7 วัน = ส้ม, อื่นๆ = เทา)
+        return `<tr>
+          <td><strong>${h(g.goods_name)}</strong></td>
+          <td><span class="type-b">${h(g.goods_type)}</span></td>
+          <td style="white-space:nowrap">${fmtPrice(g.price, g.currency)}</td>
+          <td>${h(g.lists?.name) || '—'}</td>
+          <td>${fmtDate(g.expiry_date)}</td>
+          <td>${fmtDate(g.deleted_at.split('T')[0])}</td>
+          <!-- .split('T')[0] ตัดเอาแค่ YYYY-MM-DD ทิ้งส่วน time -->
+          <td><span class="badge ${left <= 3 ? 'bd' : left <= 7 ? 'bw' : 'bg'}">${left} day${left !== 1 ? 's' : ''}</span></td>
+          <td class="ac">
+            <button class="btn-s sm" style="margin-right:3px" onclick="restoreGood('${a(g.id)}')">Restore</button>
+            <button class="btn-d sm" onclick="permDel('${a(g.id)}')">Delete</button>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
   </table></div>`;
 }
 
-// ── BOOTSTRAP ─────────────────────────────────────────
-window.addEventListener('DOMContentLoaded',async()=>{
-  const{data:{session}}=await sb.auth.getSession();
-  if(session?.user){S.user=session.user;await initApp();}
-  sb.auth.onAuthStateChange(async(evt)=>{
-    if(evt==='SIGNED_OUT'){$('app-screen').style.display='none';$('auth-screen').style.display='flex';}
+// ══════════════════════════════════════════════════════════════════
+// BOOTSTRAP — เริ่มต้น app เมื่อ DOM พร้อม
+// ══════════════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', async () => {
+  // DOMContentLoaded: fires เมื่อ HTML โหลดและ parse เสร็จ (ก่อน image/stylesheet)
+  // เหตุผลที่ใช้ DOMContentLoaded แทน load: เร็วกว่า ไม่ต้องรอ resource ทั้งหมด
+
+  // ตรวจสอบว่ามี session ที่ยังไม่หมดอายุอยู่หรือไม่ (user login ค้างไว้จาก session ก่อน)
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    // session?.user: optional chaining ป้องกัน error ถ้า session เป็น null
+    S.user = session.user; // ใช้ข้อมูล user จาก session เดิม
+    await initApp(); // เริ่มต้น app โดยไม่ต้อง login ใหม่
+  }
+  // ถ้าไม่มี session: แสดงหน้า login (auth-screen แสดงอยู่แล้วตอนต้น)
+
+  // ฟัง event การเปลี่ยนแปลง auth state จาก Supabase
+  sb.auth.onAuthStateChange(async (evt) => {
+    // evt = 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED' ฯลฯ
+    if (evt === 'SIGNED_OUT') {
+      // เมื่อ logout (ไม่ว่าจะเกิดจากที่ไหน: ปุ่ม signOut, session หมดอายุ, logout จาก tab อื่น)
+      $('app-screen').style.display  = 'none';
+      $('auth-screen').style.display = 'flex';
+    }
+    // SIGNED_IN จัดการใน submitAuth() แล้ว ไม่ต้องซ้ำ
   });
 });
 </script>
